@@ -4305,10 +4305,11 @@ table, td, th {
 </li>
 <li>母集団の標準偏差を 10、母集団の平均が 50点とする<br />
 </li>
-<li><code>R</code> を使って、データを生成してみる</li>
+<li><code>R</code>
+の<code>rnorm() 関数</code>を使って、この母集団から分析で使うデータを生成してみる</li>
 </ul>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1982</span>)              <span class="co"># 同一の結果を得るためにシードを設定</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">10000</span>,       <span class="co"># </span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">10000</span>,       <span class="co"># 10000人分の架空データを作成する  </span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>               <span class="at">mean =</span> <span class="dv">50</span>,   <span class="co"># 母集団の平均値 = 50  </span></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">sd =</span> <span class="dv">10</span>) <span class="sc">|&gt;</span>  <span class="co"># 母集団の標準偏差 = 10</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">round</span>(<span class="at">digits =</span> <span class="dv">0</span>)         <span class="co"># 点数は小数点以下を切り捨て</span></span>
@@ -4320,7 +4321,12 @@ table, td, th {
 <ul>
 <li><code>df</code> の記述統計を表示</li>
 </ul>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(df<span class="sc">$</span>score)</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sd</span>(df<span class="sc">$</span>score)</span></code></pre></div>
+<pre><code>[1] 9.975603</code></pre>
+<ul>
+<li>標準偏差はほぼ 10</li>
+</ul>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(df<span class="sc">$</span>score)</span></code></pre></div>
 <pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
      16      43      50      50      57      87 </code></pre>
 <ul>
@@ -4363,7 +4369,7 @@ table, td, th {
 <li>例えば、試験点数 <code>score</code> の 30点を <code>z</code>
 値に変換してみる</li>
 </ul>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(<span class="dv">30-50</span>)<span class="sc">/</span><span class="dv">10</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="dv">30-50</span>)<span class="sc">/</span><span class="dv">10</span></span></code></pre></div>
 <pre><code>[1] -2</code></pre>
 <ul>
 <li>試験点数 <code>score</code> の 30点は <code>z</code> 値の -2
@@ -4829,12 +4835,12 @@ table, td, th {
 </div>
 <div id="r-による-t-検定" class="section level2">
 <h2>3.3 R による <code>t 検定</code></h2>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 標本サイズ 10 のサンプルに score という名前をつける</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">9</span>, <span class="dv">10</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 標本サイズ 10 のサンプルに score という名前をつける</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">9</span>, <span class="dv">10</span>)</span></code></pre></div>
 <div id="母平均-5-を検定する-信頼区間-95-5で統計的に有意" class="section level4">
 <h4>母平均 = 5 を検定する (信頼区間 = 95% → 5%で統計的に有意)</h4>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 帰無仮説（母平均 = 5) を `t 検定`する</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(score, <span class="at">mu =</span> <span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 帰無仮説（母平均 = 5) を `t 検定`する</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(score, <span class="at">mu =</span> <span class="dv">5</span>)</span></code></pre></div>
 <pre><code>
     One Sample t-test
 
@@ -4869,8 +4875,8 @@ mean of x
 </div>
 <div id="母平均-3-を検定する-信頼区間-95-5で統計的に有意" class="section level4">
 <h4>母平均 = 3 を検定する (信頼区間 = 95% → 5%で統計的に有意)</h4>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 帰無仮説（母平均 = 3) を `t 検定`する</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(score, <span class="at">mu =</span> <span class="dv">3</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 帰無仮説（母平均 = 3) を `t 検定`する</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(score, <span class="at">mu =</span> <span class="dv">3</span>)</span></code></pre></div>
 <pre><code>
     One Sample t-test
 
@@ -4906,8 +4912,8 @@ mean of x
 <ul>
 <li>信頼区間を変更したい場合は <code>conf.level</code> を指定する</li>
 </ul>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 帰無仮説（母平均 = 3) を `t 検定`する</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(score, <span class="at">mu =</span> <span class="dv">3</span>, <span class="at">conf.level =</span> <span class="fl">0.99</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 帰無仮説（母平均 = 3) を `t 検定`する</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(score, <span class="at">mu =</span> <span class="dv">3</span>, <span class="at">conf.level =</span> <span class="fl">0.99</span>)</span></code></pre></div>
 <pre><code>
     One Sample t-test
 
@@ -4952,7 +4958,7 @@ NHKの世論調査によりますと、菅内閣を「支持する」と答え�
 <li>「支持する」と答えたのは、回答した人数である1214人の 29%なので 352
 人</li>
 </ul>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.test</span>(<span class="fu">c</span>(<span class="dv">352</span>), <span class="fu">c</span>(<span class="dv">1214</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.test</span>(<span class="fu">c</span>(<span class="dv">352</span>), <span class="fu">c</span>(<span class="dv">1214</span>))</span></code></pre></div>
 <pre><code>
     1-sample proportions test with continuity correction
 
@@ -4973,7 +4979,7 @@ sample estimates:
 <li><p><strong>仮に、菅内閣を「支持する」と答えたのが
 352人ではなく300人だったとすると</strong></p></li>
 </ul>
-<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.test</span>(<span class="fu">c</span>(<span class="dv">300</span>), <span class="fu">c</span>(<span class="dv">1214</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.test</span>(<span class="fu">c</span>(<span class="dv">300</span>), <span class="fu">c</span>(<span class="dv">1214</span>))</span></code></pre></div>
 <pre><code>
     1-sample proportions test with continuity correction
 
