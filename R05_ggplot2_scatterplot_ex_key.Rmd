@@ -1,0 +1,245 @@
+---
+title: "5. ggplot2（散布図）Ex_Answer_key"
+author: "Masahiko Asano"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+ 
+<style>
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+</style>
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```
+
+- **このセクションで使っている `R packages`**  
+
+```{r, comment = "", message = FALSE}
+library(DT)
+library(gapminder)
+library(gghighlight)
+library(ggrepel)
+library(stargazer)
+library(tidyverse)
+```
+
+# 7. Exercise  
+- **Q7.1**:  
+`「1.3 ドットの形をカスタマイズ」`を参考にして、2009年衆院選における「選挙費用」と「得票率」の散布図を描きなさい  
+・その際、`shape = 23`  を使い「内側が `yellow`」で「枠線が `magenta`」の「`◇`」を表示させなさい  
+
+
+```{r}
+df <- read_csv("data/hr96-21.csv",
+               na = ".")  
+```  
+
+```{r}
+df %>%
+  filter(year == 2009) %>% 
+   ggplot() +
+   geom_point(aes(x = exp, 
+                  y = voteshare), 
+              color = "magenta",    # 枠線の色を指定 
+              fill = "yellow",　# 内側の色塗り指定
+              shape = 23) +     # ドットの形を指定  
+   labs(x = "選挙費用", 
+        y = "得票率") +
+  ggtitle("選挙費用と得票率の散布図: 2009年総選挙") +
+  theme_bw(base_family = "HiraKakuProN-W3")
+```
+
+- **Q7.2**:   
+`「2.2 ドットの色を変えて次元追加」`を参考にして、2009年衆院選における「選挙費用」と「得票率」の散布図を描きなさい  
+・その際、自民党候補者とそれ以外の候補者を色分けして表示させなさい  
+
+
+```{r}
+df %>%
+  filter(year == 2009) %>% 
+  mutate(ldp = if_else(seito == "自民", "自民党", "非自民党")) %>% 
+   ggplot() +
+   geom_point(aes(x = exp, 
+                  y = voteshare,
+                  color = ldp,    # ldp を色分け
+                  alpha = 0.5)) + # 透明度を追加  
+   labs(x = "選挙費用", 
+        y = "得票率") +
+  ggtitle("選挙費用と得票率の散布図: 2009年総選挙") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  theme(legend.position = "bottom") # レジェンドの位置を下に
+```
+
+- **Q7.3**:    
+`「2.4 ドットの色を指定する」`を参考にして、2009年衆院選における「選挙費用」と「得票率」の散布図を描きなさい  
+・その際、自民党候補者を `red`、それ以外の候補者を `grey` に色分けして表示させなさい  
+
+```{r}
+df %>%
+  filter(year == 2009) %>% 
+  mutate(ldp = if_else(seito == "自民", "自民党", "非自民党")) %>% 
+   ggplot() +
+   geom_point(aes(x = exp, 
+                  y = voteshare,
+                  color = ldp,    # dpj を色分け
+                  alpha = 0.5)) + # 透明度を追加  
+   labs(x = "選挙費用", 
+        y = "得票率") +
+  ggtitle("選挙費用と得票率の散布図: 2009年総選挙") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  theme(legend.position = "bottom") + # レジェンドの位置を下に
+  scale_color_manual(values = c("自民党" = "red",
+                                "非自民党" = "grey"))
+```
+
+
+- **Q7.4**:   
+・**Q1:**`「3. 回帰直線を加えた散布図 (1)」`を参考にして、2005年衆院選における「選挙費用」と「得票率」の散布図を描きなさい  
+・その際、`facet_wrap()` 関数を使って政党ごとに散布図を表示させ、自民党と民主党が隣同士になるよう留意しなさい  
+
+```{r}
+df %>% 
+  filter(year == 2005) %>% 
+   mutate(seito = factor(seito,
+                         levels = c("自民", "民主", "公明", "みんな",
+                                    "共産", "国民新党", "幸福", "新党日本", 
+                                    "無所", "社民"))) %>% 
+   ggplot(aes(x = exp,
+              y = voteshare,
+              color = seito,
+              alpha = 0.5)) + # ドットの透明度を指定
+   geom_point() +     
+  geom_smooth(method = lm) + 　　# 回帰直線を引く
+   labs(x = "選挙費用", 
+        y = "得票率") +
+  ggtitle("選挙費用と得票率の散布図: 2009年総選挙") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  facet_wrap(~seito, ncol = 4) + # 4 列表示にする
+  theme(legend.position = "none") + # レジェンドを非表示
+  theme(axis.text.x  = element_text(angle = 40, vjust = 1, hjust = 1)) # 35度回転
+```
+
+・**Q2:**:`group_by()` 関数を使って、政党別の得票率を計算し `DT::datatable()` 関数を使って結果を表示させなさい  
+
+```{r}
+df %>% 
+  filter(year == 2005) %>% 
+  group_by(seito) %>% 
+  summarise(ave_vs = mean(voteshare, 
+                          na.rm = TRUE)) %>% 
+  DT::datatable()
+```
+
+
+- **Q7.5**:  
+・**Q1:**`「4.5 特定の国をハイライトして表示」`を参考にして、`gapminder` を使って「一人あたりGDP (USD)の対数値」と
+「寿命」の散布図を表示させなさい  
+・その際、自分が興味ある国を 3 つ選び、色別に表示させなさい
+
+```{r}
+library(gapminder)
+```
+
+```{r}
+gapminder %>% 
+  mutate(pop_m = pop / 1000000) %>% 
+  ggplot(aes(x = log(gdpPercap), 
+             y = lifeExp, 
+             col = country, 
+             size = pop_m)) +
+  geom_point(alpha = 0.5) +
+  gghighlight(country %in% c("Japan", 
+                             "Afghanistan", 
+                             "India"),
+              label_params = list(size = 3)) +
+    labs(x = "一人あたりGDP (USD)の対数値", 
+       y = "寿命",
+       size = "人口",
+       color = "大陸") +
+  theme_bw(base_family = "HiraKakuProN-W3") 
+```
+
+・**Q2: **上のグラフからわかることを簡潔にまとめなさい  
+
+- **Q7.6**:  
+・**Q1**:`「5.2 次元を加えた散布図（都道府県）」`を参考にして、第24回 (2015) 参議院議員選挙において、「都道府県の人口密度 (`did`)」を `x` 軸、「19歳有権者の投票率 (`age19`)」を `y` 軸とした散布図を描きなさい  
+・必要に応じて変数を対数変換すること  
+
+```{r}
+hc2015 <- read_csv("data/18vote.csv")
+```
+
+```{r}
+hc2015 %>% 
+  ggplot(aes(did, age19)) +
+  geom_point() +
+  stat_smooth(method = lm) +
+  geom_text(aes(y = age19 + 1, 
+                label = pref),
+            size = 2, 
+            family = "HiraKakuPro-W3") +
+  labs(x = "都市度", y = "19歳の投票率") +
+  theme_bw(base_family = "HiraKakuProN-W3")
+```  
+
+- 見やすくするため、`x` 軸の「都市度 (`did`)」を `log` 変換 する  
+- `x = log(did) `と指定
+
+```{r}
+hc2015 %>% 
+  ggplot(aes(log(did), age19)) +
+  geom_point() +
+  stat_smooth(method = lm) +
+  geom_text(aes(y = age19 + 1, 
+                label = pref),
+            size = 2, 
+            family = "HiraKakuPro-W3") +
+  labs(x = "都市度", y = "19歳の投票率") +
+  theme_bw(base_family = "HiraKakuProN-W3")
+```
+・**Q2**: 上のグラフからわかることを簡潔にまとめなさい  
+
+- 19歳の投票率」と「都市度」には正の相関がある  
+
+
