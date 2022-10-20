@@ -1,0 +1,1356 @@
+---
+title: "5. ggplot2（折れ線グラフ）"
+author: "Masahiko Asano"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: journal
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+ 
+<style>
+
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```
+**このセクションで使う `R パッケージ`一覧**      
+
+```{r}
+library(DT)
+library(gapminder)
+library(gghighlight)
+library(ragg)
+library(stargazer)
+library(tidyverse)
+```
+
+**折れ線グラフ**  
+
+- 折れ線グラフはある連続変数の時系列的な変化を示す際に使われる  
+- 株価の変動であれば、横軸は日付（＝順序変数）、縦軸は株価（＝連続変数）  
+- 横軸は順序付きであれば、年月日のような「離散変数」でも「連続変数」でも OK  
+
+[横軸のデータに関する注意点：]{style="color:red"}  
+
+- 横軸上の値はグループ内において 1 回だけ登場する  
+- 例）総選挙が実施された年・・・「1996」はデータでは 1 回だけしか登場しない  
+
+# 1. 折れ線グラフ  
+- 折れ線グラフで注目すべきなのは「線」でなくて「点」  
+- 「点」が表すのは**「線の傾きが変化していること」**だから　　
+- 折れ線グラフとは「線の傾きが変わり得る点を線で繋いだグラフ」  
+
+## 1.1 データの準備      
+
+- ここでは `ggplot()` を使って国ごとの平均寿命の推移を描いてみる  
+- そのためにデータを準備する  
+
+::: {.kakomi-box11}
+[`gapminder`]{.title-box11} 
+
+・`gapminder` とは R に組み込まれているデータセット      
+・`gapminder` に含まれる変数は次のとおり：  
+
+||  |
+|:------|:------|
+|(1) `year`|: 1952-2007 (every 5 years)|
+|(2) `lifeExp`|: 平均寿命|
+|(3) `country`|: 国名|
+|(4) `continent`|: 大陸名|
+|(5) `pop`|: 人口|
+|(6) `gdpPercap`|: 一人当たりGDP |
+||  |
+
+- `gapminder` をロードする  
+```{r}
+library(gapminder)
+```
+- `DT::datatable()`関数を使って、データの様子を確かめる
+```{r}
+DT::datatable(gapminder)
+```
+・`gapminder` の記述統計を表示させる 
+```{r, results = "asis"}
+stargazer(as.data.frame(gapminder),
+          type = "html")  
+```  
+
+</span>
+:::
+
+
+
+## 1.2 平均寿命の折れ線グラフ（日本人）  
+
+
+- 折れ線グラフを描くために使う幾何オブジェクトは `ggplot()` と `geom_point()`  
+
+|||
+|:---------------|:---------|
+|**幾何オブジェクト**|**意味**|
+|**[`ggplot()`]{style="color:blue"}**|[図を描くキャンバスを用意する]{style="color:blue"}|
+|**[`geom_line()`]{style="color:blue"}**|**[折れ線グラフを描く]{style="color:blue"}**|
+|||
+
+・このグラフを描くために必要な変数は次の 3 つ      
+
+|||
+|------|------|
+|(1) year|: 1952-2007 (every 5 years)|
+|(2) lifeExp|: 平均寿命|
+|(3) country|: 国名|
+|||  
+
+
+- `gapminer` には複数の国が含まれている  
+- `filter(country == "Japan")` と指定して日本のみを抽出　→　`ggplot()` 関数に渡す  
+- 幾何オブジェクトは `geom_line()`、マッピングは `x` と `y` に対して行う  
+
+```{r}
+Japan <- gapminder %>% 
+  dplyr::filter(country == "Japan") %>% 
+  dplyr::select(year, lifeExp) %>% # year と lifeExp だけを抜き出す
+  ggplot() +
+   geom_line(aes(x = year, 
+                 y = lifeExp)) +
+   labs(x = "西暦", y = "平均寿命") +
+  ggtitle("平均寿命の推移（日本）") +
+  theme_bw(base_family = "HiraKakuProN-W3")
+
+Japan
+``` 
+
+## 1.3 平均寿命の折れ線グラフ（日本・韓国・北朝鮮）  
+
+- 次に、グラフに線を 2 以上表示させてみよう  
+- `aes()` の中に `group` 引数を追加する  
+- 一本一本の線が国を意味するので、ここでは `group = country` を加える  
+- ここでは日本に限定せず、`gapminder` が含む全ての国かの中から韓国と韓国を折れ線グラフに表示させてみる  
+- まず、`gapminder` の変数 `country` を日本語にリコーディングする  
+→　要素の順番は日本、韓国、韓国とする  
+
+- `gapminder` から日本、韓国、韓国のデータだけを抜き出し `df1` と名前を付ける  
+
+```{r}
+df1 <- gapminder %>% 
+  filter(country == "Japan" | country == "Korea, Rep."| country == "Korea, Dem. Rep.")
+```
+```{r}
+df1 <- df1 %>%
+   mutate(country = case_when(country == "Japan" ~ "日本",
+                              country == "Korea, Rep." ~ "韓国",
+                              TRUE               ~ "北朝鮮"),
+          country = factor(country, levels = c("日本", "韓国", "北朝鮮")))
+```  
+
+```{r}
+DT::datatable(df1)
+```
+
+```{r}
+df1 %>%
+   ggplot() +
+   geom_line(aes(x = year, 
+                 y = lifeExp, 
+                 group = country)) +
+   labs(x = "西暦", y = "平均寿命") +
+  ggtitle("平均寿命の推移（日本・韓国・北朝鮮）") +
+  theme_bw(base_family = "HiraKakuProN-W3")
+```
+
+- 3 本の折れ線グラフは描けたが、どの線が日本、韓国、韓国なのか不明  
+- 国ごとに「線の色」を分けてみる  
+- `aes()` の中に` color` を追加する  
+
+```{r}
+df1 %>%
+   ggplot() +
+   geom_line(aes(x = year, 
+                 y = lifeExp, 
+                 group = country, 
+                 color = country), 
+             size = 1) +
+   labs(x = "西暦", y = "平均寿命") +
+  ggtitle("平均寿命の推移（日本・韓国・北朝鮮）") +
+  theme_bw(base_family = "HiraKakuProN-W3")
+```
+
+
+- 国ごとに「線の種類」で分けてみる  
+- `aes()` の中に`linetype` を追加する  
+
+```{r}
+df1 %>%
+   ggplot() +
+   geom_line(aes(x = year, 
+                 y = lifeExp, 
+                 group = country, 
+                 linetype = country), 
+             size = 1) +
+   labs(x = "西暦", y = "平均寿命") +
+  ggtitle("平均寿命の推移（日本・韓国・北朝鮮）") +
+  theme_bw(base_family = "HiraKakuProN-W3")
+```
+
+- 韓国と韓国の線はどちらも似ていて区別しにくい  
+→　韓国は破線、韓国は黒い点線に変更してみる  
+- 線のタイプを指定したい場合  
+- `scale_linetype_manual()` レイヤーを追加  
+→　`values` 引数にそれぞれの線のタイプを指定  
+
+```{r}
+df1 %>%
+   ggplot() +
+   geom_line(aes(x = year, 
+                 y = lifeExp, 
+                 group = country, 
+                 linetype = country), 
+             size = 1) +
+   labs(x = "西暦", y = "平均寿命") +
+  ggtitle("平均寿命の推移（日本・韓国・北朝鮮）") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  scale_linetype_manual(values = c("日本" = "solid",
+                                   "韓国" = "dotted",
+                                   "北朝鮮" = "dashed"))
+```  
+
+- `linetype` で指定可能な線のタイプは 6 種類  
+
+::: {style="text-align: center;"}
+![](graphs_tables/R05_oresen00.png){width="500"}
+:::  
+
+- 表示させる国の数が 4 過酷以上の場合はファセット分割してみる  
+
+```{r}
+df1 %>%
+   ggplot() +
+   geom_line(aes(x = year, 
+                 y = lifeExp, 
+                 group = country, 
+                 linetype = country), 
+             size = 1) +
+   labs(x = "西暦", y = "平均寿命") +
+  ggtitle("平均寿命の推移（日本・韓国・北朝鮮）") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  scale_linetype_manual(values = c("日本" = "solid",
+                                   "韓国" = "dotted",
+                                   "北朝鮮" = "dashed")) +
+  theme(legend.position = "none") +     # レジェンドを非表示にする
+  facet_wrap(~country)
+```  
+
+- ここではそれほどでもないが、表示する国の `y` 軸の変化に極端な差がある場合  
+- ファセットごとに**「縦軸のスケール」**を別々にすることもできる  
+→　注目すべき変化を拡大して確認できる  
+- `facet_wrap()` 内の `scales` 引数  
+- 縦軸のスケールをファセットごとに付ける場合  
+→　`scales = "free_y"` を追加  
+
+```{r}
+df1 %>%
+   ggplot() +
+   geom_line(aes(x = year, 
+                 y = lifeExp, 
+                 group = country, 
+                 linetype = country), 
+             size = 1) +
+   labs(x = "西暦", y = "平均寿命") +
+  ggtitle("平均寿命の推移（日本・韓国・北朝鮮）") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  scale_linetype_manual(values = c("日本" = "solid",
+                                   "韓国" = "dotted",
+                                   "北朝鮮" = "dashed")) +
+  theme(legend.position = "none") +     # レジェンドを非表示にする
+  facet_wrap(~country, scales = "free_y")
+```  
+
+- **[スケール変更した場合の図の解釈では、過大評価しないよう注意が必要　→　縦の目盛りに注意]{style="color:red"}**   
+
+
+## 1.4 折れ線グラフ + 散布図  
+- 折れ線グラフに散布図を追加することも可能  
+- 線の傾きが変化する（可能性がある）点に散布図をオーバラップさせる  
+- 点の形を国ごとに異なるように設定する 
+- `geom_point()` と `geom_line()` を重ねる必要がある  
+- 後に書いたレイヤーが前面に表示される  
+- **折れ線グラフ `geom_line()`** は国ごとに色分けをする  
+→　`x`, `y`, `groupcolor` に対してマッピングを行う  
+- **散布図 `geom_point()`** は国ごとに色分け・形分けをする  
+→　`x`, `y`, `color`, `shape` に対してマッピング  
+
+```{r}
+df1 %>%
+   ggplot(aes()) +
+   geom_line(aes(x = year,         # 共通するマッピング
+                 y = lifeExp,  　  # 共通するマッピング
+                 color = country,  # 共通するマッピング
+                 group = country),    
+             size = 1) +
+             　　　　　　        　  # ⇅ ggplot(aes()) に 1 回だけ入力すればよい
+  
+   geom_point(aes(x = year,         # 共通するマッピング
+                  y = lifeExp,      # 共通するマッピング
+                  color = country,  # 共通するマッピング
+                  shape = country), 
+              size = 3) +
+  labs(x = "西暦", 
+       y = "平均寿命",
+       color = "国",
+       shape = "国") +
+  ggtitle("平均寿命の推移（日本・韓国・北朝鮮）") +
+  scale_color_manual(values = c("日本" = "orangered",
+                                 "韓国" = "limegreen",
+                                 "北朝鮮" = "deeppink")) +
+  theme_bw(base_family = "HiraKakuProN-W3") 
+```
+
+- 上のコードを見ると、2 つの幾何オブジェクト (`geom_line` と `geom_point`) は `x`, `y`, `color` が同じ変数にマッピングされている  
+- 「全ての幾何オブジェクトに共通するマッピング」は `ggplot()` 内で行うことができる  
+→　コマンドを簡素化できる 
+
+```{r}
+df1 %>%
+   ggplot(aes(x = year,            # 共通するマッピング
+              y = lifeExp,         # 共通するマッピング
+              color = country)) +  # 共通するマッピング
+   geom_line(aes(group = country), 
+             size = 1) +
+   geom_point(aes(shape = country), 
+              size = 3) +
+  labs(x = "西暦", 
+       y = "平均寿命",
+       color = "国",
+       shape = "国") +
+  ggtitle("平均寿命の推移（日本・韓国・北朝鮮）") +
+  scale_color_manual(values = c("日本" = "orangered",
+                                 "韓国" = "limegreen",
+                                 "北朝鮮" = "deeppink")) +
+  theme_bw(base_family = "HiraKakuProN-W3") 
+```
+
+
+# 2. 当選者年齢の折れ線グラフ（自民・民主）  
+
+## 2.1 データ (`hr96-21.csv`)    
+- 1996年から 2021年まで実施された衆議院選挙データセット ( [hr96-21.csv](https://asanoucla.github.io/hr96-21.csv)) をダウンロードする  
+- R プロジェクトフォルダ内に `data` という名前を付けたフォルダーを作成し、その中にダウンロードした `csv` ファイルを入れる  
+- `csv`ファイルを読み込むために必要な `readr`  パッケージをロードする（`tidyverse` パッケージをロードすると、自動的に `readr` パッケージもロードされる）
+
+```{r}
+library(tidyverse)
+```
+- データを読み込み `hr` と名前をつける   
+```{r}
+hr <- read_csv("data/hr96-21.csv", 
+               na = ".")           
+```  
+・データフレーム `hr` に含まれている変数を確認  
+```{r}
+names(hr)
+```
+
+・次の 4 つの変数を使って、1996年から2021年までの衆議院選挙の小選挙区当選者の年齢（中央値）の推移に関して、自民党と民主党それぞれの時系列グラフを描いてみる  
+
+||  |
+|:------|:------|
+|(1) `year`|: 選挙が実施された年 (1996-2021) |
+|(2) `age`|: 立候補者の年齢|
+|(3) `wl`|: 0 = 小選挙区落選、1 = 小選挙区当選、2 = 復活当選|
+|(4) `seito`|: 立候補者が所属する政党|
+||  |
+
+::: {style="text-align: center;"}
+![](graphs_tables/dv_f1.png){width="400"}
+:::
+
+- 衆議院選挙の小選挙区当選者の年齢（中央値）の推移を表す上のようなグラフを描くためには、age の代わりに **「当選者年齢の中央値（選挙ごと）」**が必要  
+  
+
+||  |
+|:------|:------|
+|(1) `year`|: 選挙が実施された年 (1996-2021) |
+|(2) `age_median`|: 選挙ごと (1996〜2021) における当選者年齢の中央値|
+|(3) `wl`|: 0 = 小選挙区落選、1 = 小選挙区当選、2 = 復活当選|
+|(4) `seito`|: 立候補者が所属する政党|
+||  |
+
+- `age_median` はデータフレーム (`hr`) に含まれていない  
+=> 新たに作る必要がある  
+- 選挙ごと、政党ごとに計算する  
+- 必要なデータフレームはこんな感じ  
+
+||||
+|:------|:------|:----|:---|
+|#|year|age_median|seito|
+|1|[1996]{style="color:blue"}|[数値]{style="color:blue"}|[自民]{style="color:blue"}|
+|[・]{style="color:blue"}|[・]{style="color:blue"}|[・]{style="color:blue"}|[・]{style="color:blue"}|
+|[・]{style="color:blue"}|[・]{style="color:blue"}|[・]{style="color:blue"}|[・]{style="color:blue"}|
+|7|[2021]{style="color:blue"}|[数値]{style="color:blue"}|[自民]{style="color:blue"}|
+|8|[1996]{style="color:red"}|[数値]{style="color:red"}|[民主]{style="color:red"}|
+|・|[・]{style="color:red"}|[・]{style="color:red"}|[・]{style="color:red"}|
+|・|[・]{style="color:red"}|[・]{style="color:red"}|[・]{style="color:red"}|
+|14|[2014]{style="color:red"}|[数値]{style="color:red"}|[民主]{style="color:red"}|
+||||
+**・　注：2021年の総選挙直前に民主党は解党**    
+
+
+## 2.2 新たな変数 (`age_median`) を作る    
+
+- 選挙ごと (1996〜2021) における当選者年齢の中央値を表す変数（変数名は自由に付ける）     
+
+**`dplyr` パッケージを使った `age_median` の計算**      
+
+・計算する前に `age` の様子を確認する  
+```{r}
+summary(hr$age)
+```
+・`age` に欠損値 (`NA's`) が 4 つあることを確認  
+
+```{r, eval = FALSE}
+library(tidyverse)
+```
+
+```{r}
+seito_median <- hr %>%                                # seito_medianとして保存
+  filter(seito == "自民" | seito == "民主") %>%        # 自民党と民主党だけを残す
+  filter(wl == 1) %>% 　　　　　　　　　　        　   　# 当選者 (wl = 1) だけを残す
+  drop_na(age) %>%                                    # ageの4つの欠損値をドロップ
+  group_by(year, seito) %>%                           # year毎、seito毎に計算する  
+  summarise(age_median = median(age))   # ageの中央値の平均を age_maeian として保存
+```
+
+・`datatable()`関数を使ってをインターアクティブなデータを表示させる    
+```{r}
+DT::datatable(seito_median)
+```
+
+・これで線グラフを描くために必要なデータが揃った  
+
+  
+## 2.3 折れ線グラフを描く  
+
+- `seito_median` の変数 `seito` を日本語にリコーディング  
+- 要素の順番は自民、民主の順にする  
+
+```{r}
+seito_median <- seito_median %>%
+  mutate(seito = case_when(seito == "自民" ~ "自民",
+                           TRUE            ~ "民主"),
+         seito = factor(seito, levels = c("自民", "民主")))
+
+seito_median %>% 
+   ggplot(aes(x = year,               # 共通するマッピング
+              y = age_median,         # 共通するマッピング
+              color = seito)) +       # 共通するマッピング
+   geom_line(aes(group = seito), 
+             size = 1) +
+   geom_point(aes(shape = seito), 
+              size = 3) +
+  labs(x = "西暦", 
+       y = "平均年齢",
+       color = "政党",
+       shape = "政党") +
+  ggtitle("政党別当選者年齢の中央値: 1996-2021") +
+  scale_color_manual(values = c("自民" = "orangered",
+                                 "民主" = "darkcyan")) +
+  theme_bw(base_family = "HiraKakuProN-W3") 
+```  
+
+<div class="kakomi-box11"><span class="title-box11">結論
+</span>・ 1996年から2021の間に衆院選当選者の平均年齢は自民党の方が 8 歳高い  
+・ 自民党の当選者平均年齢は55歳近辺でさほど変化はないが、民主党の当選者の平均年齢は年々高まっている  
+・ 2012年にその差が 2 歳にまで狭まった  
+・ 自民、民主、両党の当選者平均年齢は下降傾向にはない  
+</div>  
+
+# 3. 米国下院の政治的二極化（経済的次元)   
+## 3.1 データ (`congress.csv`)  
+- 第80回 (1947-1948) 〜第112回 (2011-2012)  
+- 米国下院における法案に関する全ての議員の理想点を描く      
+
+**DW-NOMINATE score**       
+
+||  |
+|:------|:------|
+|`dwnom1`|: 経済問題 ・・・　-1（リベラル） 〜 1（保守的）|
+|`dwnom2`|: 人種問題 ・・・　-1（リベラル） 〜 1（保守的）|
+||  |
+- Sample size: 14552  
+
+::: {style="text-align: center;"}
+![Source: Nolan McCarty, Keith T. Poole, and Howard Rosenthal (2006) Polarized America:The Dance of Ideology and Unequal Riches. MIT Press.](graphs_tables/dv_t1.png){width="500"}
+:::  
+
+**経済的次元データ (dwnom1）を使って議会期別の中央値を政党別にプロット**     
+
+::: {style="text-align: center;"}
+![](graphs_tables/dv_f5.png){width="500"}
+:::  
+
+## 3.2 新たな変数 (`econ_median`) を作る    
+
+- 米国下院における法案に関する全ての議員の理想点（中央値）の推移を表す上のようなグラフを描くためには、`dwnom1` の代わりに **「議員の理想点（中央値）（議会のセッションごと）」**が必要  
+
+||  |
+|:------|:------|
+|(1) `congress`|: 議会のセッション番号 (80-112) |
+|(2) `econ_median`|: 米国下院における経済法案に関する全ての議員の理想点の中央値|
+|(3) `party`|: 下院議員の所属政党|
+||  |
+ 
+ 
+ - `econ_median` はオリジナルのデータフレームに含まれていない  
+=> 新たに作る必要がある  
+- 下院議会のセッションごと、政党ごとに計算する  
+- 必要なデータフレームはこんな感じ  
+- このような線グラフを描くためには次のようなデータセットが必要  
+
+::: {style="text-align: center;"}
+![](graphs_tables/dv_f6.png){width="400"}
+:::  
+
+**`econ_median` という新たな変数**  
+
+- 米国下院議会のセッション番号 (88-112) ごと に経済法案に関する全ての議員の理想点の中央値を表す変数（ここでは `econ_median` と付けたが、変数名は自由に付ける）
+
+- 米国下院における経済法案に関する全ての議員の理想点    
+・**DW-NOMINATE score** のデータセット ( [congress.csv](https://asanoucla.github.io/vote_18.csv/congress.csv) ) をダウンロードする  
+- R プロジェクトフォルダ内に `data` という名前を付けたフォルダーを作成し、その中にダウンロードした `csv` ファイルを入れる  
+- `csv`ファイルを読み込むために必要な `readr`  パッケージをロードする（`tidyverse` パッケージをロードすると、自動的に `readr` パッケージもロードされる）
+
+```{r}
+library(tidyverse)
+```
+- サーベイデータを読み込み `US` と名前をつける   
+```{r, message = FALSE}
+US <- read_csv("data/congress.csv")
+```
+- 計算する前に `US` の欠測値（欠損値）を確認する  
+```{r, comment = ""}
+summary(US$congress)
+```  
+- 欠損値はない  
+
+```{r}
+US <- US %>%                                                    　# US として保存
+  filter(party == "Republican" | party == "Democrat") %>%         # Rep と Dem だけを残す
+  group_by(congress, party) %>%                                   # congress毎、party毎に計算する  
+  summarise(econ_median = median(dwnom1))  # dwnom1 の中央値の平均を econ_maeian として保存
+```  
+
+・`datatable()`関数を使ってをインターアクティブなデータを表示させる    
+```{r}
+DT::datatable(US)
+```
+
+**折れ線グラフを描く**    
+
+```{r}
+US %>% 
+  ggplot(aes(x = congress, 
+             y = econ_median, 
+             color = party)) +
+  geom_point() +
+  geom_line() +
+  theme_bw()　+                     # 背景色を白にしたい場合 
+  ggtitle("Political Polarization: ECON Dimention(US Congress:1947-2012)") +
+  labs(x = "Congress",　　　      　# x 軸のラベルを指定
+       y = "DW-NOMINATE score (economic dimention)")　# y 軸のラベルを指定
+```  
+<div class="kakomi-box11"><span class="title-box11">結論
+</span>・ DW-NOMINATE score（経済次元） が時系列的にどのように変化しているかわかる    
+・ 政治的二極化 (political ploarization)が認められる  
+・ 民主党議員と共和党議員の経済問題に関するイデオロギーの中心は第95回議会あたりから分岐している  
+・ 近年、民主党はよりリベラル（−）になり、共和党はより保守化（＋）している
+</div>  
+  
+  
+# 4. COVID-19 の新規感染者数データ  
+## 4.1 データ (`COVID19_Worldwide.csv`) 
+- ここでは関西大学の Jaehyun SONG（宋財泫）先生がインターネットなどで独自に集めたデータ [COVID19_Worldwide.csv](https://www.jaysong.net/RBook/Data/COVID19_Worldwide.csv) を使う 【ソン先生に感謝！】  
+- 宋先生のサイトは[こちら](https://www.jaysong.net/RBook/visualization2.html#visual2-line)  
+
+|変数名|詳細|
+|:------|:------|
+|ID|ID|
+|Country 	|国名|
+|Date 	|年月日|
+|Confirmed_Day| 	COVID-19 新規感染者数（人）/ 一日あたり|
+|Confirmed_Total| 	COVID-19 累積感染者数（人）総合|
+|Death_Day| 	COVID-19 新規死亡者数（人） 一日あたり|
+|Death_Total| 	COVID-19 累積死亡者数（人）総合|
+|Test_Day| 	COVID-19 新規検査数（人） 一日あたり|
+|Test_Total| 	COVID-19 累積検査数（人）総合| 
+|||
+
+```{r}
+COVID19_df <- read_csv("data/COVID19_Worldwide.csv", 
+                       guess_max = 10000)　
+                      # 最初の10000行を読んでからデータ型を判断するよう設定
+```
+- データの型を確かめる  
+```{r}
+str(COVID19_df)
+```
+
+- 年月日データ (Data) のデータ型が文字列 (`chr`) なので `Date` 型に変更する  
+```{r}
+COVID19_df <- COVID19_df %>%
+  mutate(Date = as.Date(Date))
+```
+
+- データの記述統計を示す  
+- データ (`COVID19_df`) の変数の記述統計を表示させる\
+
+```{r}
+library(stargazer)
+```
+
+- チャンクオプションで `{r, results = "asis"}` と指定する\
+```{r, results = "asis"}
+stargazer(as.data.frame(COVID19_df), 
+          type ="html",
+          digits = 2)
+```  
+
+- データの様子がわかるように `DT` パッケージを使って表示する  
+```{r}
+DT::datatable(COVID19_df)
+```
+
+## 4.2 折れ線グラフを描いてみる    
+
+- 生データをそのままプロットする    　　
+
+- 横軸 (x)・・・日付（`Date`)  
+- 縦軸 (y)・・・累積感志望者数（`Death_Total`）  
+→　縦軸のスケールを底10の対数をとる  
+**その理由**：グラフを見やすくするため  
+→　例えば、累積死亡者数が 13万人のアメリカと、千人弱の日本を同じグラフに描くと非常に見にくい  
+
+```{r}
+COVID19_df %>%
+  ggplot() +
+  geom_line(aes(x = Date,                # x 軸に指定
+                y = Death_Total)) +　# y 軸に指定
+  scale_y_continuous(breaks = c(10, 100, 1000, 10000, 100000, 1000000),
+                     labels = c("10", "100", "1000", "10000", 
+                                "100000", "1000000"),
+                     trans = "log10") + # 縦軸のスケールを底10の対数をとる設定
+  labs(x = "月", y = "累積死亡者数 (人)") +
+  theme_minimal(base_family = "HiraKakuProN-W3")
+```  
+
+- 本来、横軸の値 (`Date`) はデータ内に **1 回のみ**登場すべき  
+- しかし、`COVID19_df`  の場合、特定の一日につき国の数だけある  
+→ 国 (`Country`) ごとに線を分けるように指定する必要あり   
+→　マッピング要素として `group` を指定  
+→　`group` で指定した変数の値ごとに異なる折れ線グラフを出力する  
+- 国の数が多いので、自分が知りたい特定の国を指定してみる  
+- `unique()` 関数を使って `Country` の中身を表示させてみる  
+
+```{r}
+unique(COVID19_df$Country)
+```
+
+
+## 4.3 特定の国々だけをプロットする    
+
+- 上の国のリストから、カナダ、フランス、ドイツ、イタリア、日本、イギリス、アメリカのいわゆる G7 を選んで表示させてみる  
+
+```{r}
+G7 <- c("Cananda", "France", "Germany", "Italy", "Japan", 
+        "United Kingdom", "United States")
+
+COVID19_df %>%
+  filter(Country %in% G7) %>%
+  ggplot() +
+  geom_line(aes(x = Date, 
+                y = Death_Total, 
+                color = Country)) +
+  scale_y_continuous(breaks = c(10, 100, 1000, 10000, 100000, 1000000),
+                     labels = c("10", "100", "1000", "10000", 
+                                "100000", "1000000"),
+                     trans = "log10") +
+  labs(x = "月", y = "累積死亡者数 (人)", color = "国") +
+  theme_minimal(base_family = "HiraKakuProN-W3")
+```  
+
+- G7 の国々だけを選んで表示できた  
+- 累積死亡者数と凡例の上位国が一致しないので、見にくい  
+
+
+**グラフと凡例のずれの修正: `fct_reorder2()` 関数**  
+
+- グラフの右端の時点（つまり7月10日の時点）で最も累積志望者数が多い国はアメリカなのに、凡例では凡例では最下位に表示されている  
+- この凡例の表示順番を `fct_reorder2()` 関数を使って並べ替える  
+- データの最終日付 (`Date`) は `2020-07-10` で、この時点で累積志望者数 (`Death_Total`) が最多のアメリカを凡例の最上位に表示したい  
+
+→　`Date` を現在に近い順でソートする  
+→　累積志望者数 (`Death_Total`) の高い順（＝降順 ↓ ）で表示させる  
+
+```{r}
+COVID19_df %>%
+  filter(Country %in% G7) %>%
+  mutate(Country = fct_reorder2(Country,     # 凡例に表示する変数名
+                                Date,        # Date を現在に近い順にソート
+                                Death_Total, # 死亡者数の降順（↓）で表示  
+                                last2)) %>%
+  ggplot() +
+  geom_line(aes(x = Date, 
+                y = Death_Total, 
+                color = Country)) +
+  scale_y_continuous(breaks = c(10, 100, 1000, 10000, 100000, 1000000),
+                     labels = c("10", "100", "1000", "10000", 
+                                "100000", "1000000"),
+                     trans = "log10") +
+  labs(x = "月", y = "累積死亡者数 (人)", color = "国") +
+  theme_minimal(base_family = "HiraKakuProN-W3")
+```
+
+
+
+
+## 4.4 特定の国だけを際立たせる    
+
+- データ全体と比較しながら、興味ある特定の国の線の色だけを際立たせることができる  
+- `gglighlight` パッケージを使って表示させる  
+
+```{r}
+library(gghighlight)
+```
+
+```{r}
+COVID19_df %>%
+  ggplot() +
+  geom_line(aes(x = Date, 
+                y = Death_Total, 
+                color = Country)) +
+  gghighlight(Country %in% c("Japan", "China", "South Korea",
+                             "United States", "Taiwan")) +
+  scale_y_continuous(breaks = c(10, 100, 1000, 10000, 100000, 1000000),
+                     labels = c("10", "100", "1000", "10000", 
+                                "100000", "1000000"),
+                     trans = "log10") +
+  labs(x = "月", y = "累積死亡者数 (人)") +
+  theme_minimal(base_family = "HiraKakuProN-W3")
+```
+
+
+# 5. 大臣に任命された議員の「選挙の強さ」  
+
+#### Research Question:  
+- 大臣に任命された代議士は選挙に強いのか？  
+
+#### 分析対象:    
+- 2022年8月10日の第二次岸田改造内閣で閣僚に任命された代議士17名  
+- 2 名の参議院議員（野村哲郎氏と岡田直樹氏）と1名の公明党議員（斉籐哲夫氏）は分析に含めていない  
+
+#### 分析方法:    
+- 1996年から2021年までの総選挙に出馬して当選した自民党議員の得票率と対比しつつ分析する  
+- **「選挙の強さ」**を「小選挙区で得た**[得票率]{style="color:blue"}**」と「小選挙区での**[マージン]{style="color:red"}**」の二つの方法で分析してみる  
+
+::: {style="text-align: center;"}
+![Source: https://news.yahoo.co.jp/articles/e3ce47b1f7dd2b266997810fa1d28d3caab0ce4c/images/000](graphs_tables/R05_kishida_cab2022.png){width="500"}
+:::  
+
+## 5.1 「選挙の強さ」= 得票率の場合  
+### 5.1.1 データの準備（得票率）  
+
+::: {.kakomi-box11}
+[データ（得票率の平均値）の準備]{.title-box11} 
+
+- データを読み込み `hr` と名前をつける   
+
+```{r}
+hr <- read_csv("data/hr96-21.csv", 
+               na = ".")           
+```  
+- 分析で使う変数だけに絞り、 `df1` とデータフレーム名を付ける  
+```{r}
+df1 <- hr |> 
+  select(year, wl, seito, j_name, voteshare)
+```
+
+```{r}
+DT::datatable(df1)
+```
+                                       
+#### 任命された代議士一覧 `M16`  
+- `j_name` をファクター化し、得票率の高い順に表示順番を指定  
+```{r}
+df1 <- df1 |> 
+  mutate(M16 = factor(j_name,
+                      levels = c("林芳正",
+                                 "加藤勝信",
+                                 "寺田稔",
+                                 "河野太郎",
+                                 "浜田靖一",
+                                 "西村康稔",
+                                 "鈴木俊一",
+                                 "西村明宏",
+                                 "葉梨康弘",
+                                 "高市早苗", 
+                                 "谷公一",
+                                 "松野博一",
+                                 "秋葉賢也",
+                                 "山際大志郎",
+                                 "小倉将信",
+                                 "永岡桂子")))
+```
+
+- 大臣に任命された代議士16人それぞれの平均得票率を計算し、結果を `df_vs_M16` という名前を付けて保存する    
+
+```{r}
+df_vs_M16 <- df1 |> 
+  select(M16, voteshare) |> 
+  group_by(M16) |> 
+  summarise(ave_vs = mean(voteshare))
+```
+- `df_vs_M16` の計算結果を表示させる
+
+```{r}
+DT::datatable(df_vs_M16)
+```  
+
+#### 自民党の立候補者の得票率の平均値  
+- 1996年〜2021年総選挙において**自民党の立候補者が獲得した得票率の平均値**を計算してみる　
+
+```{r}
+df1 |> 
+  filter(seito == "自民") |> 
+  group_by(n()) |> 
+  summarise(vs_average = mean(voteshare)) |> 
+  DT::datatable()
+```
+- 約 47% だと分かった  
+
+</span>
+:::  
+
+### 5.1.2 大臣と自民党候補者の得票率  
+
+- 自民党立候補者の総選挙ごとの得票率を **`grey` で表示**  
+- 大臣に任命された代議士 16人 の得票率に**色を付けて表示**  
+- 自民党立候補者の得票率平均 (47%) を**黒い点線**で表示させる      
+
+```{r}
+df1 %>%
+  filter(seito == "自民") |> # 自民党候補者だけを選ぶ
+  ggplot(aes(x = year, 
+             y = voteshare, 
+             color = j_name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 47, # 自民党立候補者の得票率平均を黒の点線で表示  
+             linetype="dotted", 
+             color = "black") + 
+  theme_bw(base_family = "HiraKakuProN-W3") + 
+  labs(x = "総選挙", 
+       y = "得票率") +
+  ggtitle("第2次岸田改造内閣大臣の総選挙結果（平均得票率）") +
+  scale_x_continuous(breaks = c(1996, 2000, 2003, 2005, 2009, 2012, 2014, 2017, 2021),
+                     labels = c("1996", "2000", "2003", "2005", "2009", "2012", "2014", "2017", "2021")) +
+  theme(axis.text.x = element_text(angle = 60, # 選挙年を60度回転
+                                   vjust = 1,
+                                   hjust = 1),
+        panel.grid.major.x = element_blank())  + # 縦線グリッドを削除
+  theme(legend.position = "none") +
+  gghighlight(j_name %in% M16,  # 大臣に任命された代議士リスト M16  
+              use_direct_label = FALSE) # 図の中にラベルは付けない  
+```  
+
+- 上の図だと大臣を特定できないので、大臣ごとの得票率をファセットで取り出し表示  
+
+### 5.1.3 大臣と自民党候補者の得票率（ファセット）  
+
+- 得票率の高い順に表示する大臣の順番を指定している  
+
+```{r}
+plot_1 <- df1  |> 
+  mutate(M16 = factor(M16,　# 得票率の高い順に表示する順番を指定
+                          levels = c("林芳正",
+                                     "加藤勝信",
+                                     "河野太郎",
+                                     "西村康稔",
+                                     "寺田稔",
+                                     "浜田靖一",
+                                     "高市早苗", 
+                                     "葉梨康弘",
+                                     "松野博一",
+                                     "西村明宏",
+                                     "鈴木俊一",
+                                     "谷公一",
+                                     "小倉将信",
+                                     "山際大志郎",
+                                     "秋葉賢也",
+                                     "永岡桂子")),
+         j_name = fct_reorder(j_name,　　　　　# j_name を numeric に変換  　　
+                              as.numeric(M16))) |>
+  filter(seito == "自民") |> 
+  
+  ggplot(aes(x = year, 
+                y = voteshare, 
+                color = j_name)) +
+  geom_line(color = "orangered") +
+  geom_point(color = "orangered") +
+  geom_hline(yintercept= 47, 
+             linetype="dotted", 
+             color = "black") + # 当選者の得票率平均に黒い点線  
+  gghighlight(j_name %in% M16,
+              use_direct_label = FALSE) +
+  theme_bw(base_family = "HiraKakuProN-W3") + 
+  facet_wrap(~j_name) +
+  labs(x = "総選挙", 
+       y = "得票率") +
+  ggtitle("第2次岸田内閣大臣の総選挙結果（得票率）") +
+  scale_x_continuous(breaks = c(1996, 2000, 2003, 2005, 2009, 2012, 2014, 2017, 2021),
+                     labels = c("1996", "2000", "2003", "2005", "2009", "2012", "2014", "2017", "2021")) +
+  theme(axis.text.x = element_text(angle = 70, # 70度回転
+                                   vjust = 1,
+                                   hjust = 1),
+        panel.grid.major.x = element_blank())  + # 縦線グリッドを削除
+  theme(legend.position = "none")
+
+plot_1
+```  
+
+- これでも十分使えるが、図を保存する際に縦横のサイズを指定することで調整できる   
+
+#### 作成した図の保存方法：  
+
+- 作成した図を保存したいときには `R Project` フォルダ内に、`graphs_tables` などのような名前を付けたファイルをあらかじめ作成し、その中に保存するのが良い  
+- 例えば、次のように指定して保存する    
+
+```{r}
+ggsave(filename = "graphs_tables/plot_1.png", # 保存先とファイル名
+       plot     = plot_1,               　　  # 保存する図のオブジェクト名
+       width    = 6,                　　　　  # 図の幅 (インチ)
+       height   = 8,                　　　　  # 図の高さ (インチ)
+       dpi      = 400,              　　　　  # 解像度
+       device   = ragg::agg_png)     　　　　 # 文字化け防止・raggパッケージをインストールすること
+```
+- ここで新たに保存した図 `plot_1.png` を表示してみる  
+- 縦軸のスケールが広がり、かなり見やすくなった  
+
+::: {style="text-align: center;"}
+![](graphs_tables/R05_plot_1.png){width="550"}
+:::  
+
+- 1 行目の大臣・・・**かなり選挙に強い代議士**（ほとんど平均値以上を得票）    
+- 2 行目の大臣・・・**選挙に強い代議士**  
+- 3 行目の大臣・・・**そこそこ選挙に強い代議士**  
+- 4 行目の大臣・・・**選挙に強いとはいえない代議士** （ほとんど平均値以下を得票）  
+・とりわけ、**永岡桂子**は2005, 2009, 2012, 2014, 2017年総選挙は比例で復活当選    
+・2021年総選挙で初めて小選挙区で当選  
+
+
+
+
+## 5.2 「選挙の強さ」= マージンの場合      
+### 5.2.1 データの準備（マージン）  
+
+::: {.kakomi-box11}
+[データ（`margin`）の準備]{.title-box11}  
+
+- 選挙の強さ: `Margin`（1996-2021）  
+
+- 惜敗率でわかるのは、小選挙で落選した「当選者以外」の選挙での強さ    
+
+$$惜敗率 = \frac{次点者の票数}{当選者の票数}$$  
+
+- 惜敗率は 0 と 1 の間の値  
+- 小選挙区当選者の惜敗率は全員 1  
+→ 小選挙区当選者間の強さの違いはわからない  
+
+- **[当選者を含めた選挙の強さ  (`Margin`)を知りたい場合]{style="color:red"}**    
+→　ひと工夫必要  
+
+$$当選者のMargin = \frac{当選者の票数}{次点者の票数}$$  
+
+- 当選者の Marginは 1 以上の値  
+- 小選挙区の**落選者**の Margin は「惜敗率」を使う (0〜1)  
+- 小選挙区の**当選者**の Margin は「当選者の Margin」を使う (1以上)    
+→ **[小選挙区の当選者と落選者、両方の選挙の強さを比較できる]{style="color:blue"}**  
+
+- `hr` が含む変数は次のとおり  
+
+```{r}
+names(hr)
+```
+
+- `Margin` を計算するために必要な変数は次のとおり  
+1. year  
+2. ku  
+3. kun  
+4. vote  
+5. rank  
+
+- 変数を絞る  
+```{r}
+hr_margin <- hr %>% 
+  select(year, ku, kun, rank, j_name, vote, wl, seito)
+```
+
+- `ku` の中身を確認する  
+
+```{r}
+unique(hr_margin$ku)
+```  
+
+- `kun` の中身を確認する  
+
+```{r}
+unique(hr_margin$kun)
+```  
+
+- `kun = 25` は東京  
+- 下の式に従って、変数 `margin` を計算する  
+
+$$当選者のMargin = \frac{当選者の票数}{次点者の票数}$$  
+
+```{r}
+calculate_margin <- function(data) {
+  dat1 <- data %>% 
+    arrange(rank) %>% 
+    mutate(
+      rank1_vote = if_else(rank == 1, 
+                           vote, 
+                           NA_real_),
+      rank2_vote = if_else(rank == 2, 
+                           vote, 
+                           NA_real_)
+    ) %>% 
+    fill(rank1_vote, 
+         rank2_vote, 
+         .direction = "downup") %>% 
+    mutate(
+      divide_vote = if_else(rank == 1, 
+                            rank2_vote, 
+                            rank1_vote),
+      margin = vote / divide_vote
+    )
+  return(dat1)
+}
+```
+
+- `year` と `ku` と `kun` を組み合わせて `district` という名前の変数をつくる  
+- 例）`year` (1996) + `ku` (miyagi) + `kun` (6) => `district` (1996_miyagi_6)  
+
+```{r}
+hr_margin <- hr_margin %>% 
+  mutate(
+    district = str_c(year, ku, kun, sep = "_") # year を忘れずに  
+  ) %>% 
+  group_nest(district) %>% 
+  mutate(
+    margin_vote = map(data, calculate_margin)
+  ) %>% 
+  select(district, margin_vote) %>% 
+  unnest(margin_vote)
+```  
+
+- 計算した結果から分析に必要な変数だけを引き出し `df2` と名前をつける  
+
+```{r}
+df2 <- hr_margin |> 
+  select(year, wl, seito, j_name, margin)
+```
+```{r}
+DT::datatable(df2)
+```
+
+
+#### 任命された代議士一覧 `M16`                       
+```{r}
+df2 <- df2 |> 
+  mutate(M16 = factor(j_name,
+                      levels = c("林芳正",
+                                 "加藤勝信",
+                                 "寺田稔",
+                                 "河野太郎",
+                                 "浜田靖一",
+                                 "西村康稔",
+                                 "鈴木俊一",
+                                 "西村明宏",
+                                 "葉梨康弘",
+                                 "高市早苗", 
+                                 "谷公一",
+                                 "松野博一",
+                                 "秋葉賢也",
+                                 "山際大志郎",
+                                 "小倉将信",
+                                 "永岡桂子")))
+
+```  
+
+- `df2` を使って、大臣に任命された代議士16人が出馬した総選挙でのマージンの平均値 `ave_margin` を計算し    
+→　データフレーム `df_mergin_M16` に付け加える  
+
+```{r}
+df_mergin_M16 <- df2 |> 
+  select(M16, margin) |> 
+  group_by(M16) |> 
+  summarise(ave_margin = mean(margin))
+```  
+- データフレーム `df_mergin_M16` の中身を確認する  
+
+```{r}
+DT::datatable(df_mergin_M16)
+```
+- 林芳正のマージンが最も大きく (3.33)、永岡桂子が最も小さい (0.84) とわかる  
+
+#### 自民党の立候補者のマージンの平均値   
+
+- 1996年〜2021年総選挙において自民党立候補者のマージンの平均を計算してみる　
+
+```{r}
+df2 |> 
+  filter(seito == "自民") |> 
+  group_by(n()) |> 
+  summarise(vs_margin = mean(margin)) |> 
+  DT::datatable()
+```
+
+- 約 1.44 だと分かった  
+
+</span>
+:::  
+
+### 5.2.1 大臣と自民党候補者のマージン  
+
+- 1996〜2021の総選挙に当選した自民党代議士のデータだけに絞る  
+- 自民党代議士の総選挙ごとのマージンを **`grey` で表示**  
+- 大臣に任命された代議士 16人 のマージンに**色を付けて表示**    
+- 1996年〜2021年総選挙において自民党の当選者が獲得したマージンの平均 (1.44 %) に**黒い点線**を引く
+
+
+```{r}
+df2 %>%
+  filter(seito == "自民") |> # 自民党候補者だけを選ぶ
+  ggplot(aes(x = year, 
+                y = margin, 
+                color = j_name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 1.44, 
+             linetype="dotted", 
+             color = "black") + # 自民党当選者のマージン平均に黒い点線
+  theme_minimal(base_family = "HiraKakuProN-W3") + 
+  labs(x = "総選挙", 
+       y = "マージン") +
+  ggtitle("第2次岸田内閣大臣の総選挙結果(マージン）") +
+  scale_x_continuous(breaks = c(1996, 2000, 2003, 2005, 2009, 2012, 2014, 2017, 2021),
+                     labels = c("1996", "2000", "2003", "2005", "2009", "2012", "2014", "2017", "2021")) +
+  theme(axis.text.x = element_text(angle = 60, # 選挙年を60度回転
+                                   vjust = 1,
+                                   hjust = 1),
+        panel.grid.major.x = element_blank())  + # 縦線グリッドを削除
+  theme(legend.position = "none") +
+  gghighlight(j_name %in% M16,  # 大臣に任命された代議士リスト M16  
+              use_direct_label = FALSE)  # 図の中にラベルは付けない  
+```  
+
+- 上の図だと大臣を特定できないので、大臣ごとのマージンをファセットで取り出し表示  
+
+### 5.2.2 大臣と自民党候補者のマージン（ファセット）  
+
+- マージンの高い順に表示する大臣の順番を指定している  
+
+```{r, eval = FALSE}
+plot_2 <- df2  |> 
+  mutate(M16 = factor(M16,
+                          levels = c("林芳正",
+                                     "加藤勝信",
+                                     "河野太郎",
+                                     "西村康稔",
+                                     "寺田稔",
+                                     "浜田靖一",
+                                     "高市早苗", 
+                                     "葉梨康弘",
+                                     "松野博一",
+                                     "西村明宏",
+                                     "鈴木俊一",
+                                     "谷公一",
+                                     "小倉将信",
+                                     "山際大志郎",
+                                     "秋葉賢也",
+                                     "永岡桂子")),
+         j_name = fct_reorder(j_name,　　　　　　　# マージンの高い順に表示する順番を指定
+                              as.numeric(M16))) |> 
+  filter(seito == "自民") |> 
+  
+  ggplot(aes(x = year, 
+                y = margin, 
+                color = j_name)) +
+  geom_line(color = "blue") +
+  geom_point(color = "blue") +
+  geom_hline(yintercept = 1, 
+             linetype="dotted", 
+             color = "red") + # 自民党当選者のマージン平均に黒い点線
+  gghighlight(j_name %in% M16,
+              use_direct_label = FALSE) +
+  theme_bw(base_family = "HiraKakuProN-W3") + 
+  facet_wrap(~j_name) +
+  ylim(0, 4.6) +  
+  labs(x = "総選挙", 
+       y = "マージン") +
+  ggtitle("第2次岸田内閣大臣の総選挙結果（マージン）") +
+  scale_x_continuous(breaks = c(1996, 2000, 2003, 2005, 2009, 2012, 2014, 2017, 2021),
+                     labels = c("1996", "2000", "2003", "2005", "2009", "2012", "2014", "2017", "2021")) +
+  theme(axis.text.x = element_text(angle = 70, # 70度回転
+                                   vjust = 1,
+                                   hjust = 1),
+        panel.grid.major.x = element_blank())  + # 縦線グリッドを削除
+  theme(legend.position = "none") 
+
+plot_2
+```  
+
+::: {style="text-align: center;"}
+![この図は width = 6, height = 8 と指定したものである](graphs_tables/R05_plot_2.png){width="550"}
+:::  
+
+- 例えば、マージン = 2 というのは、次点者が獲得した票の 2 倍獲得したという意味  
+
+- 1 行目の大臣・・・**かなり選挙に強い代議士**  
+- 2 行目の大臣・・・**選挙に強い代議士**  
+- 3 行目の大臣・・・**そこそこ選挙に強い代議士**  
+- 4 行目の大臣・・・**選挙に強いとはいえない代議士**  
+・とりわけ、**永岡桂子**は2005, 2009, 2012, 2014, 2017年総選挙は比例で復活当選    
+・2021年総選挙で初めて小選挙区で当選
+
+
+#### 作成した図の保存方法：  
+
+- 作成した図を保存したいときには `R Project` フォルダ内に、`graphs_tables` などのような名前のファイルをあらかじめ作成し、その中に保存するのが良い  
+- 保存の一例は次のとおり  
+
+
+```{r, eval = FALSE}
+ggsave(filename = "graphs_tables/plot_2.png", # 保存先とファイル名
+       plot     = plot_2,               　　  # 保存する図のオブジェクト名
+       width    = 6,                　　　　  # 図の幅 (インチ)
+       height   = 8,                　　　　  # 図の高さ (インチ)
+       dpi      = 400,              　　　　  # 解像度
+       device   = ragg::agg_png)     　　　　 # 文字化け防止・raggパッケージをインストールすること
+```
+
+
+
+## 5.3 「選挙に強い」とは？    
+- ここでは「大臣に任命されること」と「総選挙の強さ」を考えてみる    
+- ある政治家が「大臣に任命されたか否か」ということは、明確に判断できる  
+- しかし、ある政治家の「選挙の強さ」を明確に知ることはそれほど単純ではない  
+- ここでは、代議士の選挙の強さに関して、次の 2 つのデータが得られた  
+
+・`df_vs_M16`・・・大臣に任命された 16 人の「平均得票率」    
+・`df_mergin_M16`・・・大臣に任命された 16 人の「平均マージン」    
+
+```{r}
+head(df_vs_M16, 16)
+head(df_mergin_M16, 16)
+```
+- 2 つのデータフレームを  `inner_join()` 関数を使ってジョイントしてみよう    
+
+```{r}
+df_3 <- inner_join(df_vs_M16,
+           df_mergin_M16, 
+           by = "M16")
+```
+
+```{r}
+DT::datatable(df_3)
+```
+
+- ここでの問題は、これら 2 つの変数を使って**「選挙の強さ」をどう判断するか**、ということ   
+- 例えば、林芳正の「平均得票率 `ave_vs`」は 76.94、 「平均マージン `ave_margin`」は 3.34 でいずれの変数でも最大値    
+→　「最も選挙に強いのは林芳正である」と結論づけるのは早急  
+- その理由は、林芳正は1995年参院選（山口県選挙区）で初当選して以来、連続 5 回当選している（つまり、27年間参議院議員であった）  
+- 2021年総選挙に初めて出馬した選挙結果と、1996年から複数回出馬している他の大臣の選挙結果を、単純比較することはできない  
+- また、衆議院と参議院で選挙制度が異なるため、参院と衆院での選挙結果を単純に比較して、どちらが選挙に強いか判断することは難しい  
+- 「選挙の強さ」の指標である「平均得票率 `ave_vs`」も「平均マージン `ave_margin`」も、いずれも大臣の順位が同じ  
+→　この順位で選挙に強いとはいえそう  
+→　しかし、しっかり分析するためには「選挙の強さ」を定義して計量化する必要がある     
+
+
+##### 大臣の任命と政治家の選挙の強さには次のような「因果推論」に関する問題がある　　  
+
+①　選挙に強い代議士だから、総理大臣が任命したのか？  
+②　総理大臣が大臣に任命したから、選挙に強くなったのか？  
+
+# 6. Exercise  
+
+・**Q6.1`:「4.4特定の国だけを際立たせる」`を参考にして、あなたが興味ある国々を複数選び、累計死亡者数を国ごとにハイライトして際立たせた折れ線グラフを描きなさい**    
+
+・**Q6.2:`「2. 当選者年齢の折れ線グラフ（自民・民主）」`を参考にして、こたえなさい**  
+
+- 1996年から 2021年まで実施された衆議院選挙データセット ( [hr96-21.csv](https://asanoucla.github.io/hr96-21.csv)) を読み込み、下の 4 つの変数を使って、1996年から2021年までの衆議院選挙の小選挙区当選者の**得票率（中央値）**の推移に関して、自民党と民主党それぞれの折れ線グラフを描きなさい  
+
+||  |
+|:------|:------|
+|(1) `year`|: 選挙が実施された年 (1996-2021) |
+|(2) `voteshare`|: 立候補者の得票率 (%)  |
+|(3) `wl`|: 0 = 小選挙区落選、1 = 小選挙区当選、2 = 復活当選|
+|(4) `seito`|: 立候補者が所属する政党、自民 = 自民党、民主 = 民主党|
+||  |
+
+
+**参考文献**    
+<ul>
+<li>[宋財泫 (Jaehyun Song)・矢内勇生 (Yuki Yanai)「私たちのR: ベストプラクティスの探究」](https://www.jaysong.net/RBook/)</li>  
+<li>[土井翔平（北海道大学公共政策大学院）「Rで計量政治学入門」](https://shohei-doi.github.io/quant_polisci/data-import.html)</li>
+<li>[矢内勇生（高知工科大学）授業一覧](http://yukiyanai.github.io/teaching/)</li>
+<li>浅野正彦, 矢内勇生.『Rによる計量政治学』オーム社、2018年</li>
+<li>浅野正彦, 中村公亮.『初めてのRStudio』オーム社、2018年</li>
+<li>Winston Chang, R Graphics Cookbook, O'Reilly Media, 2012.</li>
+<li>Kieran Healy, DATA VISUALIZATION, Princeton, 2019</li>
+<li>Kosuke Imai, Quantitative Social Science: An Introduction, Princeton University Press, 2021</li>
+</div>
+</div>
+
+
