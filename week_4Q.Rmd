@@ -1,0 +1,117 @@
+---
+title: "1. データ・ハンドリング（応用）：模範解答"
+author: "Masahiko Asano"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+<style>
+ 
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```
+
+- ここで必要な R パッケージ  
+
+```{r}
+library(tidyverse)
+library(stargazer)
+```  
+
+
+
+## Q8.1  
+`「2. 行のソート: arrange()」`を参考にして、次の問題にこたえなさい  
+分析には衆議院選挙データセット ( [hr96_21.csv](http://www.ner.takushoku-u.ac.jp/masano/class_material/waseda/keiryo/hr96_21.csv) ) を使うこと  
+表示する変数は次の 6 つに限ること  
+(1) year  
+(2) pref  
+(3) kun  
+(4) seito  
+(5) j_name  
+(6) vote  
+(7) voteshare 
+
+
+### Q1:  
+- 2021年総選挙の立候補者の中で、獲得した票数の多い順に並べ、トップ10人の候補者名を挙げなさい  
+
+### []{style="color:red"}
+
+
+
+### Q2:  
+- 2021年総選挙の立候補者の中で、獲得した得票率の大きい順に並べ、トップ10人の候補者名を挙げなさい 
+
+
+## Q8.2  
+`「7.3 separate()」`を参考にして、次の問題にこたえなさい  
+データ [COVID19_Worldwide.csv](https://www.jaysong.net/RBook/Data/COVID19_Worldwide.csv) を使う   
+
+|変数名|詳細|
+|:------|:------|
+|ID|ID|
+|Country 	|国名|
+|Date 	|年月日|
+|Confirmed_Day| 	COVID-19 新規感染者数（人）/ 一日あたり|
+|Confirmed_Total| 	COVID-19 累積感染者数（人）総合|
+|Death_Day| 	COVID-19 新規死亡者数（人） 一日あたり|
+|Death_Total| 	COVID-19 累積死亡者数（人）総合|
+|Test_Day| 	COVID-19 新規検査数（人） 一日あたり|
+|Test_Total| 	COVID-19 累積検査数（人）総合| 
+|||
+
+### []{style="color:red"}
+- 2020年 (1月22日〜7月10日)の国別「累積検査数」を `x` 軸、「累積感染者数」を `y` 軸に設定した散布図を描きなさい  
+
+
+#### Q1:  
+- 2020年 (1月22日〜7月10日)の国別「累積検査数」を `x` 軸、「累積感染者数」を `y` 軸に設定した散布図を描きなさい  
+・外れ値があれば、外れ値を除外した散布図を示しなさい  
+
+
