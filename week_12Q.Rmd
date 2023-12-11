@@ -1,0 +1,136 @@
+---
+title: "Week 12: 問題"
+author: "Your name"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+
+<style>
+
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```  
+
+
+- 分析に必要なパッケージをロードする  
+```{r, message = FALSE, warning = FALSE}
+library(interplot)
+library(jtools)
+library(margins)
+library(msm)
+library(patchwork)
+library(stargazer)
+library(tidyverse)
+```  
+
+
+# 5. Excercise      
+
+- 「選挙費用が得票率に与える影響は、民主党候補者とそれ以外の候補者で異なるかどうか」を調べたい  
+- ここで使うデータはは1996年から2021年に実施された総選挙結果: **[hr96-21.csv](http://www.ner.takushoku-u.ac.jp/masano/class_material/waseda/keiryo/Data/hr96-21.csv)**  
+
+- このデータセットには次の 23 個の変数が入っている
+
+| 変数名        | 詳細                                                         |
+|:---------------|:-----------------------|
+|1. year| 選挙年 (1996-2021) |
+|2. pref | 都道府県名         |
+|3. ku | 小選挙区名   |
+|4. kun  | 小選挙区    |
+|5. rank | 当選順位       |
+|6. nocand  | 立候補者数       |
+|7. seito  | 候補者の所属政党   |
+|8. j_name  | 候補者の氏名（日本語）   |
+|9. name  | 候補者の氏名（ローマ字）   |
+|10. previous  | 当選回数           |
+|11. gender | 立候補者の性別: "male", "female"     |
+|12. age  | 立候補者の年齢   |
+|13. wl | 選挙の当落: 1 = 小選挙区当選、2 = 復活当選、0 = 落選 |
+|14. wlsmd  | 選挙の当落: 1 = 当選（小選挙区）、0 = 落選（小選挙区） |
+|15. exp  | 立候補者が使った選挙費用（総務省届け出）  |
+|16. status| 候補者のステータス: 0 = 非現職、1 現職、2 = 元職  |
+|17. vote | 得票数    |
+|18. voteshare  | 得票率 (%)    |
+|19. eligible  | 小選挙区の有権者数   |
+|20. turnout  | 小選挙区の投票率 (%)  |
+|21. seshu_dummy  | 世襲候補者ダミー: 1 = 世襲、0 = 非世襲（地盤世襲 or 非世襲） |
+|22. jiban_seshu| 地盤の受け継ぎ元の政治家の氏名と関係  |
+|23. nojiban_seshu | 世襲元の政治家の氏名と関係 |
+|     |    |
+
+- ここから 2009年のデータと次の 6 つの変数を抜き出して分析しなさい  
+
+|変数名|詳細|
+|:---|:---|
+|voteshare|得票率 (%)  |
+|exppv|有権者一人当たりに候補者が費やした選挙費用 (yen)  |
+|dpj|民主党ダミー(民主党候補者 = 1、それ以外の候補者 = 0)  |
+|previous|候補者の当選回数|
+|age|候補者の年齢|
+|nocand|立候補者数|
+
+**注意1：`dpj` という変数はデータセット内には含まれていないので、`seito` もしくは `party` 変数を使って各自作成すること**  
+**注意2：`exppv` という変数はデータセット内には含まれていないので、`exp` と `eligible` 2 つの変数を使って各自作成すること**  
+
+#### Q1:  
+- 上記 6  つの変数に関する記述統計を表示させなさい   
+
+#### Q2:  
+- 選挙費用と得票率の散布図を表示し、簡単にコメントしなさい   
+
+#### Q3:  
+- 衆議院選挙において「選挙費用が得票率に与える影響は、民主党候補者とそれ以外の候補者で異なるかどうか」に関するあなたの仮説を述べなさい   また、そう考える理由を簡単に述べなさい  
+
+#### Q4:  
+- 「選挙費用が得票率に与える影響は、民主党候補者とそれ以外の候補者で異なる」と言えるか？ `msm` パッケージを使って、民主党候補者とそれ以外の候補者それぞれに関して、選挙費用が得票率に与える限界効果を可視化し、その結果をわかりやく説明しなさい     
+
+
+
+
+

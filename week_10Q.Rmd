@@ -1,0 +1,187 @@
+---
+title: "Week 10: 模範解答"
+author: "Your name"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+<style>
+
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```
+
+- このセクションで使う `R パッケージ`一覧    
+```{r, message = FALSE}
+library(tidyverse)
+library(DT)
+library(stargazer)
+```
+
+## Excercise 8.2  
+
+**・[hr96-21.csv](http://www.ner.takushoku-u.ac.jp/masano/class_material/waseda/keiryo/Data/hr96-21.csv)** は1996年から2021年に実施された総選挙結果である　　
+
+- このデータセットには 23 個の変数が入っている
+
+| 変数名        | 詳細                                                         |
+|:---------------|:-----------------------|
+|1. year| 選挙年 (1996-2021) |
+|2. pref | 都道府県名         |
+|3. ku | 小選挙区名   |
+|4. kun  | 小選挙区    |
+|5. rank | 当選順位       |
+|6. nocand  | 立候補者数       |
+|7. seito  | 候補者の所属政党   |
+|8. j_name  | 候補者の氏名（日本語）   |
+|9. name  | 候補者の氏名（ローマ字）   |
+|10. previous  | 当選回数           |
+|11. gender | 立候補者の性別: "male", "female"     |
+|12. age  | 立候補者の年齢   |
+|13. wl | 選挙の当落: 1 = 小選挙区当選、2 = 復活当選、0 = 落選 |
+|14. wlsmd  | 選挙の当落: 1 = 当選（小選挙区）、0 = 落選（小選挙区） |
+|15. exp  | 立候補者が使った選挙費用（総務省届け出）  |
+|16. status| 候補者のステータス: 0 = 非現職、1 現職、2 = 元職  |
+|17. vote | 得票数    |
+|18. voteshare  | 得票率 (%)    |
+|19. eligible  | 小選挙区の有権者数   |
+|20. turnout  | 小選挙区の投票率 (%)  |
+|21. seshu_dummy  | 世襲候補者ダミー: 1 = 世襲、0 = 非世襲（地盤世襲 or 非世襲） |
+|22. jiban_seshu| 地盤の受け継ぎ元の政治家の氏名と関係  |
+|23. nojiban_seshu | 世襲元の政治家の氏名と関係 |
+|     |    |
+
+- `hr96-21.csv` から 2009年のデータだけを抜き出し、次の問題にこたえなさい  
+
+### Q1:  
+- `seito` 変数を使って `dpj` という名称の「民主党ダミー（民主党候補者なら 1、それ以外は 0）」を作成し、データフレームに加えなさい   
+
+### Q2:  
+- `exp` の単位は「円」だが、この単位を「百万円」に変換し、変数名を `expm` と変更しデータフレームに加えなさい　
+
+
+### Q3:  
+- `status` 変数を使って `inc` という名称の「現職ダミー（小選挙区当選者なら 1、それ以外は 0）」を作成し、データフレームに加えなさい  
+
+### Q4:  
+- stargazer パッケージを使ってデータフレームの記述統計を示しなさい    
+
+### Q5:  
+- `voteshare` を応答変数、`expm` を説明変数とした散布図を描きなさい（95％信頼区間を示す回帰直線も含む）    
+
+### Q6:  
+- この散布図から 2 つの変数の間にはどのような関係があると言えるか述べなさい  　　
+
+### Q7:  
+- 立候補者が使う選挙費用 (`expm`) から得票率 (`voteshare`) を予測したい  
+
+- 次の 14 の変数の中でコントロール変数として含めるべき変数を全て選びなさい  
+
+- 変数として「含めるべき理由」と「含めるべきでない理由」をそれぞれ述べなさい  
+
+| 変数名| 詳細|含めるべき?|その理由|
+|:---------------|:------------|:-------|:-----------|
+| 1. rank | 当選順位       |||
+| 2. nocand  | 立候補者数       |||
+| 3. j_name  | 候補者の氏名（日本語）   |||
+| 4. previous  | 当選回数           |||
+| 5. gender | 立候補者の性別: "male", "female"     |||
+| 6. age  | 立候補者の年齢   |||
+| 7. wl | 選挙の当落: 1 = 小選挙区当選、2 = 復活当選、0 = 落選 |||
+| 8. wlsmd  | 選挙の当落: 1 = 当選（小選挙区）、0 = 落選（小選挙区） |||
+| 9. vote | 得票数|||
+| 10. eligible  | 小選挙区の有権者数   |||
+| 11. turnout  | 小選挙区の投票率 (%)  |||
+| 12. seshu_dummy  | 世襲候補者ダミー: 1 = 世襲、0 = 非世襲（地盤世襲 or 非世襲） |||
+| 13. dpj  | 民主党ダミー（民主党候補者なら 1、それ以外は 0）|||
+| 14. inc| 現職ダミー: 0 = 非現職、1 現職（小選挙区当選者）|||
+|     |    |||
+
+### Q8:  
+- Q7で皆さんが選んだコントロール変数を一つだけ含めて、`voteshare` を応答変数、`expm` を説明変数とした重回帰分析を実行し model_2 と名前を付けなさい    
+
+- `model_2` に皆さんが選んだコントロール変数を一つずつ含めて `model_3`, `model_4`,… と複数の回帰分析を実行しなさい  
+- `stargazer()`関数を使って、実行した回帰分析結果を表示し、解釈しなさい  
+- 解釈する際、必要に応じて`summary()`関数、もしくは `tidy()`関数を使うこと
+
+
+### Q9:  
+- `sjPlot` もしくは `jtools` パッケージを使って、最も適切と思われるモデルを一つ選び、その分析結果を可視化しなさい  
+
+### Q10:  
+- 残差プロットによる診断によって、誤差の独立性の診断しなさい  
+
+### Q11:  
+- 正規QQプロットによる診断によって、誤差が正規分布に従うことを確認しなさい        
+
+### Q12:  
+- `VIF` による診断によって、多重共線性の有無を確認しなさい       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

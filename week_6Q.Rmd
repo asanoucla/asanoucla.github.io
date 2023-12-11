@@ -1,0 +1,101 @@
+---
+title: "Week 6: 問題"
+author: "Your name"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+ 
+<style>
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+</style>
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```
+
+- **このセクションで使っている `R packages`**  
+
+```{r, comment = "", message = FALSE}
+
+```
+
+# 7. Exercise  
+#### Q7.1:   
+`「1.3 ドットの形をカスタマイズ」`を参考にして、2009年衆院選における「選挙費用」と「得票率」の散布図を描きなさい  
+・その際、`shape = 23`  を使い「内側が `yellow`」で「枠線が `magenta`」の「`◇`」を表示させなさい  
+
+
+
+#### Q7.2:  
+`「2.2 ドットの色を変えて次元追加」`を参考にして、2009年衆院選における「選挙費用」と「得票率」の散布図を描きなさい  
+・その際、自民党候補者とそれ以外の候補者を色分けして表示させなさい  
+
+
+#### Q7.3:   
+`「2.4 ドットの色を指定する」`を参考にして、2009年衆院選における「選挙費用」と「得票率」の散布図を描きなさい  
+・その際、自民党候補者を `red`、それ以外の候補者を `grey` に色分けして表示させなさい  
+
+
+#### Q7.4:  
+・**Q1:**`「3. 回帰直線を加えた散布図 (1)」`を参考にして、2005年衆院選における「選挙費用」と「得票率」の散布図を描きなさい  
+・その際、`facet_wrap()` 関数を使って政党ごとに散布図を表示させ、自民党と民主党が隣同士になるよう留意しなさい  
+
+・**Q1:**`group_by()` 関数を使って、政党別の得票率を計算し `DT::datatable()` 関数を使って結果を表示させなさい
+
+#### Q7.5:  
+・**Q1:**`「4.5 特定の国をハイライトして表示」`を参考にして、`gapminder` を使って「一人あたりGDP (USD)の対数値」と
+「寿命」の散布図を表示させなさい  
+・その際、自分が興味ある国を 3 つ選び、色別に表示させなさい
+
+
+
+・**Q2: **上のグラフからわかることを簡潔にまとめなさい  
+
+#### Q7.6:  
+・**Q1**:`「5.2 次元を加えた散布図（都道府県）」`を参考にして、第24回 (2015) 参議院議員選挙において、「都道府県の人口密度 (`did`)」を `x` 軸、「19歳有権者の投票率 (`age19`)」を `y` 軸とした散布図を描きなさい  
+・必要に応じて変数を対数変換すること  
+
+
+・**Q2**: 上のグラフからわかることを簡潔にまとめなさい  
+
+
