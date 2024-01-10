@@ -1,0 +1,42 @@
+---
+title: テーマ
+author: "学歴番号 名前"
+date:  "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,         
+  warning = FALSE,       
+  message = FALSE,      
+  cache = FALSE, 
+  comment = "",
+  fig.align = "center"  
+)
+
+set.seed(27)             
+```
+
+### はじめに  
+ここから書き始めて下さい  
+
+### 1. 先行研究
+
+### 2. 理論
+
+### 3. 仮説
+
+### 4. データ
+
+### 5. モデル
+
+### 6. 分析結果
+
+### 7. 結論
+
+### 参考文献
