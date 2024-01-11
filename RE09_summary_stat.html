@@ -11,7 +11,7 @@
 
 <meta name="author" content="Masahiko Asano" />
 
-<meta name="date" content="2023-11-18" />
+<meta name="date" content="2024-01-11" />
 
 <title>9. Descriptive Statistics</title>
 
@@ -4022,7 +4022,7 @@ border-radius: 0px;
 
 <h1 class="title toc-ignore">9. Descriptive Statistics</h1>
 <h4 class="author">Masahiko Asano</h4>
-<h4 class="date">2023-11-18</h4>
+<h4 class="date">2024-01-11</h4>
 
 </div>
 
@@ -5260,8 +5260,8 @@ elections.</li>
 <span id="cb95-15"><a href="#cb95-15" tabindex="-1"></a>            <span class="at">number_of_cand       =</span> <span class="fu">n</span>(),</span>
 <span id="cb95-16"><a href="#cb95-16" tabindex="-1"></a>            <span class="at">ave_vote_per_cand =</span> <span class="fu">mean</span>(vote, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span></code></pre></div>
 <div class="sourceCode" id="cb96"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" tabindex="-1"></a>DT<span class="sc">::</span><span class="fu">datatable</span>(hr2021_1)</span></code></pre></div>
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-d762654f72291d2d996d" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-d762654f72291d2d996d">{"x":{"filter":"none","vertical":false,"data":[["1","2","3","4","5","6","7","8","9","10"],["CDP","CGP","IND","ISHIN","JCP","KOKUMIN","LDP","REIWA","SDP","SHOHA"],[17215620,872931,2269166,4802793,2640801,1245719,27626157,248280,313193,222368],[214,9,80,94,105,21,277,12,9,36],[80446.82242990653,96992.33333333333,28364.575,51093.54255319149,25150.48571428571,59319.95238095238,99733.41877256318,20690,34799.22222222222,6176.888888888889]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>PARTY<\/th>\n      <th>total_votes<\/th>\n      <th>number_of_cand<\/th>\n      <th>ave_vote_per_cand<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":[2,3,4]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-78c4a0f0d375d5e40234" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-78c4a0f0d375d5e40234">{"x":{"filter":"none","vertical":false,"data":[["1","2","3","4","5","6","7","8","9","10"],["CDP","CGP","IND","ISHIN","JCP","KOKUMIN","LDP","REIWA","SDP","SHOHA"],[17215620,872931,2269166,4802793,2640801,1245719,27626157,248280,313193,222368],[214,9,80,94,105,21,277,12,9,36],[80446.82242990653,96992.33333333333,28364.575,51093.54255319149,25150.48571428571,59319.95238095238,99733.41877256318,20690,34799.22222222222,6176.888888888889]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>PARTY<\/th>\n      <th>total_votes<\/th>\n      <th>number_of_cand<\/th>\n      <th>ave_vote_per_cand<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":[2,3,4]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 <ul>
 <li>There doesn’t need to be a new value (<code>TRUE ~ &quot;&quot;</code>) for
 every condition.<br />
@@ -5546,49 +5546,66 @@ character type.<br />
 </div>
 </div>
 </div>
-<div id="exercise" class="section level2">
-<h2>5. Exercise</h2>
-<div id="section" class="section level3">
-<h3>5.1:</h3>
-<p>Download <a href="http://www.ner.takushoku-u.ac.jp/masano/class_material/waseda/keiryo/Data/hr96-21.csv">hr96-21.csv</a>
-to your computer and answer the following questions using
-hr96-21.csv.</p>
+<div id="practice-questions" class="section level2">
+<h2>5. Practice Questions</h2>
 <ul>
-<li><p>Q1: Use the <code>group_by()</code> and <code>ggplot()</code>
-functions to calculate and visualize the average age of candidates in
-the general elections (1996-2021) for all political parties as a line
-graph.</p></li>
-<li><p>Q2: Limit the display to only the Liberal Democratic Party (LdP),
-Democratic Party of Japan (DPJ), and Clean Govermental Party
-(CGP).</p></li>
-<li><p>Q3: Calculate and visualize as a line graph the average age of
-elected candidates in the general elections (1996-2021) for the three
-parties (LDP, DPJ, and CGP).<br />
-・Also, display the number of elected candidates.</p></li>
+<li>Using the Lower House election data (hr96-21.csv), answer the
+following questions:</li>
+</ul>
+<div id="q5.1" class="section level4">
+<h4>Q5.1:</h4>
+<ul>
+<li>Use the <code>group_by()</code> and <code>ggplot()</code> functions
+to calculate and visualize the average age of candidates in the general
+elections (1996-2021) for all political parties with a line graph.</li>
 </ul>
 </div>
-<div id="section-1" class="section level3">
-<h3>5.2:</h3>
-<p>Download <a href="http://www.ner.takushoku-u.ac.jp/masano/class_material/waseda/keiryo/Data/hr96-21.csv">hr96-21.csv</a>
-to your computer and answer the following questions using
-hr96-21.csv.<br />
-The values of the variable <code>wl</code> are 0, 1, 2.</p>
+<div id="q5.2" class="section level4">
+<h4>Q5.2:</h4>
+<ul>
+<li>Limit the display to the Liberal Democratic Party (LDP), Democratic
+Party, and Komeito.<br />
+</li>
+<li>In <code>seito</code>, you find the following Japanee notations on
+the three parties:<br />
+・自民 = the Liberal Democratic Party (LDP)<br />
+・公明 = Komeito<br />
+・民主 = Democratic Party</li>
+</ul>
+</div>
+<div id="q5.3" class="section level4">
+<h4>Q5.3:</h4>
+<ul>
+<li>Calculate and visualize with a line graph the average age of winners
+in the general elections (1996-2021) for the three political parties
+(LDP, Democratic Party, Komeito). Also display the number of
+winners.</li>
+</ul>
+</div>
+<div id="q5.4" class="section level4">
+<h4>Q5.4:</h4>
+<ul>
+<li>The variable wl has three values: 0, 1, 2.</li>
+</ul>
 <table>
-<colgroup>
-<col width="40%" />
-<col width="60%" />
-</colgroup>
 <thead>
 <tr class="header">
-<th align="left">Variable names</th>
-<th align="left">Details</th>
+<th align="left"><strong>Variable</strong></th>
+<th align="left"><strong>Details</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">wl</td>
-<td align="left">Election result: 1 = elected in single-member district,
-2 = re-elected, 0 = not elected</td>
+<td align="left">wl = 0</td>
+<td align="left">Not elected</td>
+</tr>
+<tr class="even">
+<td align="left">wl = 1</td>
+<td align="left">Elected in a single-member district</td>
+</tr>
+<tr class="odd">
+<td align="left">wl = 2</td>
+<td align="left">Elected through proportional representation</td>
 </tr>
 <tr class="even">
 <td align="left"></td>
@@ -5597,45 +5614,63 @@ The values of the variable <code>wl</code> are 0, 1, 2.</p>
 </tbody>
 </table>
 <ul>
-<li><p>Q1: Use <code>wl</code> and <code>if_else()</code> function to
-create a single-member district election dummy (<code>wlsmd</code>)
-where candidates elected in single-member districts are 1, and those not
-elected are 0.</p></li>
-<li><p>Q2: Use the <code>table()</code> and <code>unique()</code>
-functions to check if the variable <code>wlsmd</code> has been correctly
-created.</p></li>
-<li><p>Q3: Use the <code>filter()</code> function to extract only the
-data from the 2021 general election, and use the <code>if_else()</code>
-function to create a dummy variable (<code>ldp</code>) where Liberal
-Democratic candidates are 1, and all others are 0.<br />
-</p></li>
-<li><p>Q4: Use the <code>table()</code> and <code>unique()</code>
-functions to check if the variable ldp has been correctly
-created.</p></li>
-<li><p>Q5: Use the <code>filter()</code> function to extract only the
-data from the 2021 general election, and use the <code>mutate()</code>,
-<code>if_else()</code>, <code>%in%</code>, and <code>group_by()</code>
-functions to compare and display the average age of ruling party
-(combined LDP and CGP) and opposition candidates.<br />
-・Also, display the number of candidates for both the ruling party and
-the opposition.</p></li>
-<li><p>Q6: Use the <code>filter()</code> function to extract only the
-data from the 2021 general election, and use the <code>mutate()</code>,
-<code>if_else()</code>, <code>%in%</code>, and <code>group_by()</code>
-functions to compare and display the average age of elected candidates
-(including proportional representation re-elected candidates) of the
-ruling party (combined LDP and CGP) and the opposition.<br />
-・Also, display the number of candidates for both the ruling party and
-the opposition.<br />
-　</p></li>
-<li><p>Q7: Use the <code>filter()</code> function to extract only the
-data from the 2021 general election, and use the <code>mutate()</code>,
+<li>Use the <code>if_else()</code> function to create a single-member
+district election dummy (<code>wlsmd</code>), with 1 for candidates
+elected in single-member districts and 0 for those not elected.<br />
+</li>
+<li>Use the <code>table()</code> and <code>unique()</code> functions to
+check if the wlsmd variable is correctly created.</li>
+</ul>
+</div>
+<div id="q5.5" class="section level4">
+<h4>Q5.5:</h4>
+<ul>
+<li>Use the <code>filter()</code> function to extract data from the 2021
+general election, and the <code>if_else()</code> function to create a
+Liberal Democratic Party dummy (<code>ldp</code>) with 1 for LDP
+candidates and 0 for others.<br />
+</li>
+<li>Use the <code>table()</code> and <code>unique()</code> functions to
+check if the ldp variable is correctly created.</li>
+</ul>
+</div>
+<div id="q5.6" class="section level4">
+<h4>Q5.6:</h4>
+<p>Use the <code>filter()</code> function to extract data from the 2021
+general election and the <code>mutate()</code>, <code>if_else()</code>,
+<code>%in%</code>, and <code>group_by()</code> functions to compare and
+display the average age of government party candidates (combined LDP and
+Komeito) and opposition candidates.</p>
+<ul>
+<li>Also display the number of candidates for both the government and
+opposition parties.</li>
+</ul>
+</div>
+<div id="q5.7" class="section level4">
+<h4>Q5.7:</h4>
+<ul>
+<li>Use the <code>filter()</code> function to extract data from the 2021
+general election, and the <code>mutate()</code>, <code>if_else()</code>,
+%in%, and <code>group_by()</code> functions to compare and display the
+average age of elected candidates (including proportional representation
+winners) from the government (combined LDP and Komeito) and opposition
+parties.<br />
+</li>
+<li>Also display the number of candidates for both the government and
+opposition parties.</li>
+</ul>
+</div>
+<div id="q5.8" class="section level4">
+<h4>Q5.8:</h4>
+<ul>
+<li>Use the <code>filter()</code> function to extract data from the 2021
+general election, and the <code>mutate()</code>,
 <code>case_when()</code>, and <code>group_by()</code> functions to
 compare and display the average age of elected candidates (including
-proportional representation re-elected candidates) of the LDP, CGP, CDP,
-and other opposition parties.<br />
-・Also, display the number of candidates for the LDP, CGP, CDP, and
-other opposition parties.</p></li>
+proportional representation winners) from the LDP, Komeito,
+Constitutional Democratic Party, and other opposition parties.<br />
+0 Also display the number of candidates for the LDP, Komeito,
+Constitutional Democratic Party, and other opposition parties.</li>
 </ul>
 <strong>Reference</strong><br />
 
