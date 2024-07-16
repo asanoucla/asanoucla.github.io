@@ -1,0 +1,44 @@
+---
+title: "タイトル"
+author: "学籍番号 名前"
+date:  "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  cache = FALSE, 
+  comment = "",
+  fig.align = "center"  
+)
+```
+
+
+```{r}
+library(tidyverse)
+```
+
+### はじめに
+書き始め
+
+### 先行研究
+
+### 理論
+
+### 仮説
+
+### データ
+
+### モデル
+
+### 分析結果
+
+### 結論
+
+### 参考文献
