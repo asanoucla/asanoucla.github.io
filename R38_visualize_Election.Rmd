@@ -1,0 +1,1177 @@
+---
+title: "38. 総選挙データの可視化"
+author: "Masahiko Asano"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: journal
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+
+<style>
+
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```  
+- このセクションで使っている packages  
+
+```{r}
+library(DT)
+library(plyr)
+library(reactable)
+library(tidyverse)
+```
+
+- グラフの設定 (Macユーザのみ)   
+- ggplot を使ったグラフの中に日本語を表記させるためのコマンド   
+- ggplot でグラフの**背景を白**に指定したい場合  
+```{r}
+theme_set(theme_bw(base_size = 10,
+                        base_family = "HiraginoSans-W3"))
+```
+- ggplot でグラフの**背景をグレー**に指定したい場合  
+```{r, eval = FALSE}
+theme_set(theme_gray(base_size = 10,
+                     base_family = "HiraginoSans-W3")) 
+```  
+- グラフの中で日本語を表示させたい場合  
+
+```{r}
+theme_set(theme_bw(base_size = 10, base_family = "HiraginoSans-W3"))
+```
+
+# 1. データの準備 (`hr96-21.csv`)    
+
+## 1.1 データのダウンロード方法    
+#### 予めダウンロード先を指定する方法  
+
+- `RProject` フォルダ内に **data**  という名称のフォルダを作成する  
+- 下のコマンドを実行すると、`csv` ファイルがパソコンにダウンロードされ、**data** 内に自動的に保存される  
+
+```{r, eval = FALSE}
+download.file(url = "http://www.ner.takushoku-u.ac.jp/masano/class_material/waseda/keiryo/Data/hr96-21.csv",
+              destfile = "data/hr96-21.csv")
+```  
+
+[注意：一度ダウンロードを完了すれば、このコマンドを実行する必要はありません]{style="color:red"}  
+
+
+#### ダウンロード先を指定しない方法  
+
+- [hr96-21.csv](http://www.ner.takushoku-u.ac.jp/masano/class_material/waseda/keiryo/Data/hr96-21.csv) をクリックしてデータをパソコンにダウンロード　　
+
+- `RProject` フォルダ内に **data**  という名称のフォルダを作成する  
+- ダウンロードした `hr96-21.csv` を手動で`RProject` フォルダ内にある **data** フォルダに入れる  
+
+
+## 1.2 選挙データの読み取り方法      
+-  [次の**いずれかの方法で**]{style="color:red"} `hr96-21.csv` を読み取る  
+
+##### 読み取り方法 1  
+- `na = "."`というコマンドは「欠損値をドットで置き換える」という意味  
+- 欠損値を空欄のまま残すと、本来「数値 (`numeric`)」型のデータが「」文字型 (`character`)」として認識されるなど、エラーの原因になるため、読み取る時点で事前に対処する  
+
+
+```{r}
+hr <- read_csv("data/hr96-21.csv",
+               na = ".")  
+```  
+
+
+##### 読み取り方法 2    
+- 読み取った値の日本語が文字化けする場合  
+- `locale()`関数を使って日本語エンコーディング (`cp932`) を指定する    
+
+```{r, eval = F}
+hr <- read_csv("data/hr96-21.csv",
+               na = ".",
+               locale = locale(encoding = "cp932"))
+```  
+
+##### 読み取り方法 3     
+```{r, eval = F}
+hr <- read.csv("data/hr96-21.csv",
+               na = ".")  
+```  
+
+## 1.3 読み取った選挙データを確認  
+
+- `hr96_21.csv` は1996年に衆院選挙に小選挙区が導入されて以来実施された 9 回の衆議院選挙（1996, 2000, 2003, 2005, 2009, 2012, 2014, 2017, 2021）の結果のデータ    
+- `hr` に含まれる変数名を表示させる   
+
+```{r}
+names(hr)
+```  
+-   `df1` には 22 個の変数が入っている
+
+| 変数名        | 詳細                                                         |
+|---------------|-----------------------|
+| year| 選挙年 (1996-2017) |
+| pref | 都道府県名         |
+| ku | 小選挙区名   |
+| kun  | 小選挙区    |
+| rank | 当選順位       |
+| wl | 選挙の当落: 1 = 小選挙区当選、2 = 復活当選、0 = 落選 |
+| nocand  | 立候補者数       |
+| seito  | 候補者の所属政党   |
+| j_name  | 候補者の氏名（日本語）   |
+| name  | 候補者の氏名（ローマ字）   |
+| previous  | これまでの当選回数（当該総選挙結果は含まない）|
+| gender | 立候補者の性別: "male", "female"     |
+| age  | 立候補者の年齢   |
+| exp  | 立候補者が使った選挙費用（総務省届け出）  |
+| status| 候補者のステータス: 0 = 非現職、1 現職、2 = 元職  |
+| vote | 得票数    |
+| voteshare  | 得票率 (%)    |
+| eligible  | 小選挙区の有権者数   |
+| turnout  | 小選挙区の投票率 (%)  |
+| seshu_dummy  | 世襲候補者ダミー: 1 = 世襲、0 = 非世襲（地盤世襲 or 非世襲） |
+| jiban_seshu| 地盤の受け継ぎ元の政治家の氏名と関係  |
+| nojiban_seshu | 世襲元の政治家の氏名と関係 |
+|     |    |
+
+
+- データの型をチェック  
+```{r}
+str(hr)
+```  
+
+- 数値は `numeric` 文字は `character` として認識されていることがわかる  
+
+
+# 2. 投票率の分析    
+- 1996年〜2021年総選挙の投票率の推移を棒グラフで表示させる  
+
+- `reactable:reactable()`関数だと**[複数の条件での検索]{style="color:red"}**が可能  
+
+```{r}
+reactable::reactable(hr,
+  filterable = TRUE,  # 検索可能に設定
+  defaultPageSize = 10) # 表示行数の限界を指定  
+```
+
+- 選挙年ごとの投票率(`turnout`) の平均 (`mean.turnout`) を計算する  
+- 投票率は「選挙区単位」の数値なので、選挙年ごとに各小選挙区の平均を計算する    
+
+```{r}
+df1 <- hr |> 
+  filter(rank == 1) |> 
+  group_by(year) |> 
+  summarise(mean.turnout = mean(turnout)) |> 
+  round(digits = 1)
+```
+
+
+```{r}
+head(df1)
+```  
+・`str()` 関数を使って欠測値を確認  
+```{r}
+str(df1)
+```  
+
+・2014年と2017年総選挙における投票率が欠測 (NA) している   
+→ `na.omit() `関数を使って欠測のない観測だけを残す  
+```{r}
+df1 <- na.omit(df1)
+```  
+・1996年から2021年総選挙における投票率の平均を計算する  
+```{r}
+mean(df1$mean.turnout)
+```
+
+
+```{r}
+df1 %>% 
+  ggplot(aes(x = year, y = mean.turnout)) + 
+  geom_point() +
+  geom_line() +
+  ggtitle("総選挙の得票率: 1996-2021") +
+  geom_text(aes(y = mean.turnout + 0.5, label = mean.turnout), size = 3, vjust = 0) +
+  geom_text(label = "平均投票率: 63.4%",
+            x = 2007, y = 64, family = "HiraginoSans-W3", color = "tomato", size = 3) +
+  geom_hline(yintercept = mean(df1$mean.turnout), # 投票率の平均に線を引く
+             col = "tomato", 
+             linetype = "dotted",
+             size = 1) +
+  labs(x = "総選挙年", y = "投票率(%)")　
+```
+
+
+
+# 3. 得票率の分析  
+## 3.1 自民党と民主党の得票率の推移  
+- データフレーム `hr` を使って自民党と民主党候補者それぞれの得票率を選挙ごとに計算    
+- `ddply()` 使うためのパケージをロードする  
+```{r}
+library(plyr)
+```
+
+```{r}
+vs_ldp_dpj <- hr %>% 
+  filter(seito == "自民" | seito == "民主") %>%  # 自民と民主だけを選ぶ  
+  plyr::ddply(.(year, seito), summarize,  # 選挙年- 政党ごとに得票率の平均を計算
+                mean.vs = mean(voteshare, na.rm = TRUE)) 
+```  
+
+- 計算した結果を表示  
+```{r}
+vs_ldp_dpj$mean.vs <- round(vs_ldp_dpj$mean.vs, 
+                            digits = 1)        # 小数点 1 位まで表示  
+head(vs_ldp_dpj)
+```  
+
+- 自民党と民主党の得票率を1996年から2021まで表示  
+```{r}
+f1 <- vs_ldp_dpj %>% 
+  ggplot(aes(x = year, y = mean.vs, 
+                         color = seito, linetype = seito, shape = seito)) +
+  geom_point() +
+  geom_line() +
+  geom_text(aes(y = mean.vs + 0.5, label = mean.vs), size = 4, vjust = 0) +
+  ggtitle("自民党と民主党候補者の平均得票率: 1996-2021年衆院選") +
+  labs(x = "総選挙年", y = "得票率")　+
+  theme(legend.position = c(0.93, 0.2)) 
+f1
+```  
+・自民党と民主党それぞれの得票率の記述統計を示してみる  
+
+```{r}
+summary_by_party <- vs_ldp_dpj %>% 
+  group_by(seito) %>% 
+  summarise(mean_vs = mean(mean.vs),
+            count = n())
+```
+```{r}
+summary_by_party
+```
+
+
+<div class="kakomi-box11"><span class="title-box11">解釈
+</span>
+・2009年総選挙を除き、民主党候補者より自民党候補者の方が平均得票率が高い        
+・自民党候補者の平均得票率は 46.5%、民主党候補者の得票率は 35.3% である  
+（2017年総選挙を除く） </div>    
+
+注：2017年総選挙では民主党は解党したため、2017年総選挙の民主党の得票率データは欠測    
+
+・グラフを `figs フォルダ` に保存（任意のサイズに指定できる）  
+
+```{r, eval = FALSE}
+ggsave(filename = "fig/vs_ldp_dpj.png", 
+       width = 10, height = 7, units = "cm")
+```
+
+
+#### 自民党と立憲民主党の得票率 (1996-2021)  
+
+```{r}
+vs_ldp_cdp <- hr %>% 
+  filter(seito == "自民" | seito == "立憲") %>%  # 自民と民主だけを選ぶ  
+  plyr::ddply(.(year, seito), summarize,  # 選挙年- 政党ごとに得票率の平均を計算
+                mean.vs = mean(voteshare, na.rm = TRUE)) 
+```
+
+```{r}
+vs_ldp_cdp$mean.vs <- round(vs_ldp_cdp$mean.vs, 
+                            digits = 1)        # 小数点 1 位まで表示  
+head(vs_ldp_dpj)
+```
+
+
+```{r}
+f1 <- vs_ldp_cdp %>% 
+  ggplot(aes(x = year, y = mean.vs, 
+                         color = seito, linetype = seito, shape = seito)) +
+  geom_point() +
+  geom_line() +
+  geom_text(aes(y = mean.vs + 0.5, label = mean.vs), size = 4, vjust = 0) +
+  ggtitle("自民党と立憲民主党候補者の平均得票率: 1996-2021年衆院選") +
+  labs(x = "総選挙年", y = "得票率")　+
+  theme(legend.position = c(0.5, 0.2)) 
+f1
+```  
+
+
+
+## 3.2 Exercise    
+
+- 1996年から2021年衆議院における、公明党と共産党の小選挙区での選挙結果（候補者の得票率平均）の履歴を「それぞれ」折れ線グラフで表示しなさい  
+
+
+
+## 3.3 特定の候補者の得票率の可視化     
+### 3.3.1 安倍晋三氏の得票率  
+- データフレーム `hr` を使って安倍晋三氏のこれまでの選挙結果の履歴を表示してみよう  
+- データフレーム `hr` に含まれる変数を表示させる  
+```{r, comment = ""}
+names(hr)
+```  
+
+- 分析に必要な変数を `filter()` 関数を使って取り出し、shinzo と名前を付ける
+
+```{r, comment = ""}
+shinzo <- hr %>%
+  filter(name == "ABE, SHINZO") %>%
+  select(year, pref, kun, seito, age, nocand, rank, previous, vote, voteshare)
+```
+
+* DTパッケージの `datatable` 関数を使うと、インターアクティブなデータの記述統計を表示できる  
+```{r}
+DT::datatable(shinzo)
+```  
+
+- 安倍晋三氏の得票率の平均は
+```{r, comment = ""}
+mean(shinzo$voteshare) # voteshare の平均値
+```
+安倍晋三氏の得票率を1996年から2021年まで表示する  
+  
+```{r, message = FALSE}
+ggplot(shinzo, aes(x = year, y = voteshare)) + 
+  geom_point() +
+  geom_line() +
+  ggtitle("安倍晋三氏の得票率: 1996-2021衆院選") +
+  geom_hline(yintercept = mean(shinzo$voteshare), # 安倍氏の得票率の平均に線を引く
+             col = "tomato", 
+             linetype = "dotted",
+             size = 1) +
+  geom_text(aes(y = voteshare + 1, label = voteshare), size = 4, vjust = 0) +
+  geom_text(label = "平均得票率: 71.15%",
+            x = 2014, y = 72, family = "HiraginoSans-W3", color = "tomato", size = 3) +
+  labs(x = "総選挙年", y = "得票率(%)")　
+```  
+
+
+### 3.3.2 石破茂氏の得票率   
+- データフレーム `hr` を使って石破茂氏のこれまでの選挙結果の履歴を表示してみよう  
+- まず、必要なデータセットを `filter()` 関数を使って取り出し、shigeru と名前を付ける
+
+```{r, comment = ""}
+shigeru <- hr %>% 
+  filter(name == "ISHIBA, SHIGERU") %>%
+  select(year, pref, kun, seito, age, nocand, rank, previous, vote, voteshare)
+```  
+
+- DTパッケージの `datatable` 関数を使うと、インターアクティブなデータの記述統計を表示できる  
+```{r}
+DT::datatable(shigeru)
+```  
+
+- 石破茂氏の得票率の平均は
+```{r, comment = ""}
+mean(shigeru$voteshare) # voteshare の平均値
+```
+- 石破茂氏の得票率を1996年から2021まで表示する  
+```{r, comment = ""}
+ggplot(shigeru, aes(x = year, y = voteshare)) + 
+  geom_point() +
+  geom_line() +
+  ggtitle("石破茂氏の得票率: 1996-2021衆院選") +
+  geom_text(aes(y = voteshare + 1, label = voteshare), size = 4, vjust = 0) +
+  geom_text(label = "平均得票率: 70.77%",
+            x = 2014, y = 68, family = "HiraginoSans-W3", color = "blue", size = 3) +
+  geom_hline(yintercept = mean(shigeru$voteshare), # 石破氏の得票率の平均に線を引く
+             col = "blue", 
+             linetype = "dotted",
+             size = 1) +
+  geom_text(aes(y = voteshare + 1, label = voteshare), size = 4, vjust = 0) +
+  labs(x = "総選挙年", y = "得票率(%)")　
+```  
+
+
+### 3.3.3 Exercise    
+- 1996年から2021年衆議院における、小泉進次郎氏と河野太郎氏の選挙結果（得票率）の履歴をそれぞれ折れ線グラフで表示しなさい  
+
+
+
+### 3.3.4 安倍晋三氏と石破茂氏の得票率    
+- 安倍晋三氏と石破茂氏の得票率を1996年から2021まで表示してみよう    
+- まず、必要なデータセットを `filter()` 関数を使って取り出し、abe_ishiba と名前を付ける
+```{r, comment = ""}
+abe_ishiba <- hr %>%
+  filter(name == "ISHIBA, SHIGERU" | name == "ABE, SHINZO") %>%
+  select(year, pref, kun, seito, j_name, age, nocand, rank, previous, vote, voteshare)
+```  
+- DTパッケージの `datatable` 関数を使うと、インターアクティブなデータの記述統計を表示できる  
+```{r}
+DT::datatable(abe_ishiba)
+```  
+- 安倍晋三氏と石破茂氏の得票率を1996年から2021まで表示する
+```{r, comment = ""}
+vs_abe_ishiba <- ggplot(data = abe_ishiba, aes(x = year, y = voteshare, colour = j_name, linetype = j_name, shape = j_name)) +
+  geom_point() +
+       geom_line() + 
+  ggtitle("安倍晋三氏と石破茂氏の得票率: 1996-2021衆院選") +
+  geom_text(aes(y = voteshare + 1, label = voteshare), size = 4, vjust = 0) +
+  theme(legend.position = c(0.85, 0.45)) +
+  labs(x = "総選挙年", y = "得票率(%)")　
+
+vs_abe_ishiba
+```
+
+<div class="kakomi-box11"><span class="title-box11">解釈
+</span>
+・2009年総選挙までは安倍晋三氏の得票率が高いが、それ以降は石破茂氏の得票率が高い</div>    
+
+
+### 3.3.5 Exercise    
+1996年から2021年衆議院における、小泉進次郎氏と河野太郎氏の選挙結果（得票率）の履歴を折れ線グラフで「同時に」表示しなさい    
+その際、小泉氏、河野氏それぞれの得票率の平均を点線で示しなさい  
+
+
+### 3.3.6 得票率の高い候補者は誰?  
+**`dplyr::arrange(desc())`**     
+- 得票率の高い候補者順に並べる（＝`降順 (descending)` ）  
+- 得票率の高い順にソートする　→　得票率が欠損でないことが必要    
+- 表示する変数を指定　→　選挙年、選挙区名、政党名、年齢、氏名、票数、得票率      
+
+```{r}
+hr %>%
+  filter(!is.na(voteshare)) %>% 　　　 # 欠損のある投票率を除外 
+  arrange(desc(voteshare)) %>%  　　　 # 得票率を大きい順に並べる   
+  select(year, pref, seito, age, j_name, wl, vote, voteshare) %>%
+  print(n = 20)                        # 全て表示したければ n = inf と指定
+```  
+- **渡辺喜美氏の得票率は 95.3%!!**    
+
+
+**渡辺喜美氏はずっと高い得票率なのか？**  
+
+- 渡辺喜美氏のこれまでの選挙結果の履歴を表示してみる  
+- 分析に必要な変数を `filter()` 関数を使って取り出し `yoshimi`  と名前を付ける  
+```{r}
+yoshimi <- hr %>% 
+  filter(j_name == "渡辺喜美") %>% 
+  select(year, pref, kun, seito, wl, nocand, age, previous, vote, voteshare)
+```
+- DTパッケージの datatable 関数を使うと、インターアクティブなデータの記述統計を表示できる  
+```{r}
+DT::datatable(yoshimi)
+```
+
+- 渡辺喜美氏の得票率の平均は
+
+```{r}
+mean(yoshimi$voteshare) # voteshare の平均値
+```
+- 渡辺喜美氏の得票率を1996年から2021年まで可視化してみる     
+- マックユーザーはグラフ中で日本語を表示できるよう次のコマンドも実行  
+```{r}
+theme_set(theme_classic(base_size = 10,
+                        base_family = "HiraginoSans-W3"))
+```
+
+```{r}
+ggplot(yoshimi, aes(x = year, y = voteshare)) + 
+  geom_point() +
+  geom_line() +
+  ggtitle("渡辺喜美氏の得票率: 1996-2014衆院選") +
+  geom_hline(yintercept = mean(yoshimi$voteshare), # 渡辺氏の得票率の平均に線を引く
+             col = "tomato", 
+             linetype = "dotted",
+             size = 1) +
+  geom_text(aes(y = voteshare + 1, label = voteshare), size = 4, vjust = 0) +
+  geom_text(label = "平均得票率: 71.6%",
+            x = 2000, y = 73, family = "HiraginoSans-W3", color = "tomato", size = 3) +
+  geom_text(aes(y = voteshare + 1, label = voteshare), size = 4, vjust = 0) +
+  labs(x = "総選挙年", y = "得票率(%)")　
+```
+
+**なぜ渡辺喜美氏は95%も得票したのか？**
+
+「第45回衆議院議員総選挙にはみんなの党公認で栃木3区から出馬し、5選  当初、自民党は栃木3区に元法務大臣の森山眞弓を擁立する方向で調整していたが、自民党栃木県連の反対により撤回し、公明党も候補者を擁立しない与党空白区となった  栃木3区は日本共産党も候補を擁立しない共産空白区となり、他に候補が立候補する気配を見せなかったため、戦後衆議院選挙初の無投票当選の可能性があったが、幸福実現党の斎藤克巳が立候補したため無投票当選とはならなかった  選挙結果は渡辺が14万2482票- 得票率95.3%で圧勝  渡辺の得票率は、小選挙区制導入後現在に至るまでの最高記録である  [（ウィキペディアの記事からの引用）](https://ja.wikipedia.org/wiki/%E6%B8%A1%E8%BE%BA%E5%96%9C%E7%BE%8E)」  
+
+- では、2009年総選挙における栃木3区の選挙情報を表示してみよう  
+```{r}
+yoshimi_2009 <- hr %>% 
+  filter(year == 2009,
+         pref == "栃木",
+         kun == 3) %>% 
+  select(year, pref, kun, seito, nocand, j_name, age, vote, voteshare)
+
+yoshimi_2009
+```  
+
+
+**2014年総選挙での渡辺喜美氏は？**    
+「2014年に、後述の8億円借入問題が発生し、4月にみんなの党の代表の辞任を余儀なくされる  これを契機にみんなの党は離党者が相次ぐなど、内部対立が激しくなり、第47回衆議院議員総選挙を前に解党に至る  渡辺本人は無所属で出馬するも、落選した   」（上記ウィキペディアの記事からの引用）  
+
+- 2014年総選挙における栃木3区の選挙情報を表示してみる  
+
+```{r}
+yoshimi_2014 <- hr %>% 
+  filter(year == 2014,
+         pref == "栃木",
+         kun == 3) %>% 
+  select(year, pref, kun, seito, nocand, j_name, age, vote, voteshare)
+
+yoshimi_2014
+```  
+
+**その後の渡辺喜美氏は？**  
+
+「2017年10月の第48回衆議院議員総選挙が間近に迫った同年9月に小池百合子による希望の党の設立に影の存在として関わり、衆議院栃木3区へのくら替え出馬に意欲を示していたが、小池側の要請で出馬断念し、代わりに妹の渡辺美由紀を栃木3区から希望の党候補として擁立したが落選  その後、「当面は無所属議員として仕事をやらせてもらう」と述べ、希望の党に参加しない意向を明らかにした  11月1日の首班指名選挙では安倍晋三に投票した  」（上記ウィキペディアの記事からの引用）   
+
+
+- 2017年総選挙における栃木3区の選挙情報を表示してみる  
+```{r}
+yoshimi_2017 <- hr %>% 
+  filter(year == 2017,
+         pref == "栃木",
+         kun == 3) %>% 
+  select(year, pref, kun, seito, nocand, j_name, age, vote, voteshare)
+
+yoshimi_2017
+```  
+
+
+
+# 4. 選挙費用の分析  
+
+## 4.1 選挙費用（小選挙区別平均）   
+**最も選挙費用を費やしている小選挙区は？**    
+
+- 衆院選挙データフレーム(`hr`)から2012年のデータだけを抜き出して `hr2012` と名前をつける  
+```{r}
+hr2012 <- hr %>% 
+  dplyr::filter(year == 2012) %>% 
+  dplyr::select(exp, pref, ku, kun)
+```  
+* DTパッケージの `datatable` 関数を使うと、インターアクティブなデータの記述統計を表示できる  
+```{r}
+DT::datatable(hr2012)
+```  
+
+- 2012年衆議院選挙の小選挙区は全部で 300、立候補者は1,294人    
+- 候補者一人一人が選挙で使った選挙費用 (`exp`) を総務省に報告    
+
+<span style="color:tomato">**「小選挙区別」に候補者が使った選挙費用の平均を計算したい**</span>  
+
+- 小選挙区ごとに候補者数 (`nocand`) が異なるため、エクセルでは計算が大変(^_^;) 
+    
+```{r, echo = FALSE, out.width="100%", out.height="100%",fig.cap="変数一覧", fig.align='center'}
+knitr::include_graphics("graphs_tables/df_f1.png")
+```  
+- Rだと簡単に計算できる    
+- データフレーム hr2012 にある変数名を表示する    
+```{r, comment = ""}
+names(hr2012)
+```  
+- `exp` のクラスをチェックする  
+```{r}
+str(hr2012$exp)
+```  
+- `exp` のクラスが `numeric` だと確認できた  
+
+<div class="kakomi-box11"><span class="title-box11">`exp` の型が `numeric` 以外なら（例えば `character` なら） 
+
+</span>・`csvファイル`を開いて、`exp` に数値以外の文字などが入っていないかどうか確かめ、入っていたらそれらを数値に修正するか`「.」`（もしくは`「NA」`）と入力する    
+
+・`exp` の値が全て数値だけなら、次の方法で `numeric` に変更する  
+
+```{r}
+hr2012$exp <- as.numeric(hr2012$exp)
+```  
+- `exp` の型が `character` から `numeric`  に変更されたことを確認すること  
+
+```{r}
+str(hr2012$exp)
+```  
+ </div> 
+
+- 衆議院の小選挙区は「愛知 1」のように「都道府県名 (`pref`)」と「小選挙区番号 (`kun`)」から構成  
+- `plyr::ddply()` 関数を使って、小選挙区ごとに候補者の選挙費用 (`exp`) の平均値を計算し `mean.exp.smd12` と変数名を付ける    
+- データフレームの名前を `df_12_` と指定  
+
+```{r}
+df_12 <- hr2012 %>% 
+   group_by(ku, kun) %>% 
+  summarize(mean.exp.smd12 = mean(exp, na.rm = TRUE), 
+            .groups = "drop")
+```
+
+- `mean.exp.smmd12` の値の小数点第 1 位を切り上げて表示  
+
+```{r}
+df_12$mean.exp.smd12 <- round(df_12$mean.exp.smd12,
+                              digits = 0)           
+```  
+
+```{r}
+DT::datatable(df_12)
+```
+- 小選挙区ごとに候補者の選挙費用の平均値 (`mean.exp.smd12`) の記述統計を表示  
+```{r}
+summary(df_12$mean.exp.smd12)
+```
+- 2012年衆院選で報告された候補者の選挙区ごとの選挙費用平均額 (`mean.exp.12`) をヒストグラムで描いてみる  
+```{r}
+hist(df_12$mean.exp.smd12)
+```
+
+
+
+## 4.2 選挙費用（総選挙別）    
+**総選挙の選挙費用額は増えているのか？**    
+
+- 総選挙において候補者が総務省に届け出る選挙費用の、総選挙ごとの推移を可視化 
+
+**`exp`: 立候補者が使う選挙費用額**     
+```{r}
+df_exp <- plyr::ddply(hr, .(year), summarize,
+        mean.exp = mean(exp, na.rm = TRUE)) %>% 
+  round(digits = 0)
+```
+```{r}
+head(df_exp)
+```  
+
+- `na.omit()` 関数を使って非数値や欠測値以外の観測値だけを残す
+```{r}
+df_exp <- na.omit(df_exp)
+```
+
+```{r}
+mean(df_exp$mean.exp)
+```
+
+```{r}
+ggplot(df_exp, aes(x = year, y = mean.exp)) + 
+  geom_point() +
+  geom_line() +
+  ggtitle("立候補者が使う選挙費用平均額: 1996-2021") +
+  geom_hline(yintercept = mean(df_exp$mean.exp), # 平均に線を引く
+             col = "tomato", 
+             linetype = "dotted",
+             size = 1) +
+  geom_text(label = "平均選挙費用: 758万円",
+            x = 2000, y = 7700000, family = "HiraginoSans-W3", color = "tomato", size = 3) +
+
+  geom_text(aes(y = mean.exp + 200000, label = mean.exp), size = 3, vjust = 0) +
+  labs(x = "総選挙年", y = "選挙費用額(円)")　
+```
+
+<div class="kakomi-box11"><span class="title-box11">解釈
+</span>
+・1995年から2017年の総選挙まで選挙費用額が減少   
+・2014年、2017年と劇的に選挙費用が増加</div>  
+
+**`exppv`: **一人あたりの有権者**に費やす選挙費用額**    
+
+- 立候補者が有権者一人あたりに使う選挙費用 (`exppv`) を作る 
+
+```{r}
+hr <- hr %>% 
+  mutate(exppv = exp/eligible) # eligible は小選挙区ごとの有権者数  
+```
+
+```{r}
+df_exppv <- plyr::ddply(hr, .(year), summarize,
+        mean.exppv = mean(exppv, na.rm = TRUE)) %>% 
+  round(digits = 0)
+```
+```{r}
+head(df_exppv)
+```  
+・2012年総選挙における mean.exppv が非数値 (`NaN`)     
+
+- **`NaN`** (Not a Number): 計算不可能な式の結果（= 非数値）   
+- **`NA`** (Not Available):本来データが存在しているが、何らかの理由でデータが存在していない（= 欠測値）   
+→ `na.omit()` 関数を使って非数値や欠測値以外の観測値だけを残す
+
+```{r}
+df_exppv <- na.omit(df_exppv)
+```
+
+```{r}
+mean(df_exppv$mean.exppv)
+```
+
+```{r}
+ggplot(df_exppv, aes(x = year, y = mean.exppv)) + 
+  geom_point() +
+  geom_line() +
+  ggtitle("有権者一人あたりの選挙費用平均額: 1996-2009") +
+  geom_hline(yintercept = mean(df_exppv$mean.exppv), # 平均に線を引く
+             col = "tomato", 
+             linetype = "dotted",
+             size = 1) +
+  geom_text(label = "平均選挙費用: 24.6円",
+            x = 1999, y = 24, family = "HiraginoSans-W3", color = "tomato", size = 3) +
+  geom_text(aes(y = mean.exppv + 0.5, label = mean.exppv), size = 4, vjust = 0) +
+  labs(x = "総選挙年", y = "有権者一人あたりの選挙費用額(円)")　
+```
+<div class="kakomi-box11"><span class="title-box11">解釈
+</span>
+・1995年から2017年の総選挙まで一人当たり選挙費用額が減少（2021年総選挙の選挙費用はまだ公開されないため）  
+・2014年、2017年と劇的に一人当たり選挙費用が増加</div>    
+
+## 4.3 選挙費用（候補者別）  
+**誰が多額の選挙費用を使っているのか?**    
+**`dplyr::arrange(desc())`**    
+
+- 選挙費用の多い候補者順に並べる（＝降順 (descending) ）  
+- 選挙費用の多い順にソートする　→　選挙費用が欠損でないことが必要  
+- 表示する変数を指定　→　選挙年、選挙区名、政党名、年齢、氏名、当落、選挙費用額    
+
+```{r}
+hr %>%
+  filter(!is.na(exp)) %>% 　　　 # 欠損のある選挙費用を除外 
+  arrange(desc(exp)) %>%  　　　 # 選挙費用額を大きい順に並べる   
+  select(year, pref, seito, age, j_name, wl, exp) %>%
+  print(n = 20)                        # 全て表示したければ n = inf と指定
+```
+
+
+**2012年総選挙で多額の選挙費用を使った候補者**    
+```{r}
+hr %>%
+  filter(!is.na(exp)) %>% 　　　 # 欠損のある選挙費用を除外 
+  filter(year == 2012) %>% 
+  arrange(desc(exp)) %>%  　　　 # 得票率を大きい順に並べる   
+  select(year, pref, seito, age, j_name, wl, exp) %>%
+  print(n = 20)                        # 全て表示したければ n = inf と指定
+```
+
+**2012年総選挙で少額の選挙費用で当選した候補者**        
+**`dplyr::arrange()`**    
+
+- 選挙費用の少ない候補者順に並べる（＝昇順 (ascending) ）  
+- 選挙費用の少ない順にソートする　→　選挙費用が欠損でないことが必要  
+- 表示する変数を指定　→　選挙年、選挙区名、政党名、年齢、氏名、票数、得票率  
+
+```{r}
+hr %>%
+  filter(!is.na(exp)) %>% 　　　 # 欠損のある選挙費用を除外 
+  filter(year == 2012) %>% 
+  filter(wl > 0) %>% 
+  arrange(exp) %>%  　　　 # 選挙費用額を小さい順に並べる   
+  select(year, pref, seito, age, j_name, wl, exp) %>%
+  print(n = 20)                        # 全て表示したければ n = inf と指定
+```
+
+
+## 4.4 選挙費用と得票率の関係  
+
+・2005年総選挙における「選挙費用」と「得票率」の散布図を描いてみる  
+
+```{r}
+hr %>% 
+  select(seito, exp, voteshare, year) %>% 
+  filter(year == 2005) %>% 
+  ggplot(aes(x = exp, y = voteshare, col = seito)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = lm)
+```
+
+```{r}
+hr %>% 
+  select(seito, exp, voteshare, year) %>% 
+  filter(year == 2005) %>% 
+  ggplot(aes(x = exp, y = voteshare, col = seito)) +
+  geom_point(alpha = 0.5, size = 0.5) +
+  geom_smooth(method = lm) +
+  facet_wrap(~seito)
+```  
+
+・2009年総選挙における「選挙費用」と「得票率」の散布図を描いてみる  
+```{r}
+hr %>% 
+  select(seito, exp, voteshare, year) %>% 
+  filter(year == 2009) %>% 
+  ggplot(aes(x = exp, y = voteshare, col = seito)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = lm)
+```
+
+```{r}
+hr %>% 
+  select(seito, exp, voteshare, year) %>% 
+  filter(year == 2009) %>% 
+  ggplot(aes(x = exp, y = voteshare, col = seito)) +
+  geom_point(alpha = 0.5, size = 0.5) +
+  geom_smooth(method = lm) +
+  facet_wrap(~seito)
+```  
+
+
+# 5. ケース数の分析  
+
+- `hr` は1996年に衆院選挙に小選挙区が導入されて以来実施された 9 回の衆議院選挙（1996, 2000, 2003, 2005, 2009, 2012, 2014, 2017, 2021）の結果のデータ  
+- データを表示する際には次の二つの関数が便利  
+
+・`DT::datatable()`・・・手軽にチェックできる  
+・`rectable::reactable()`・・・複数の変数を同時に検索可能  
+```{r}
+reactable::reactable(hr,
+  filterable = TRUE,  # 検索可能に設定
+  defaultPageSize = 10) # 表示行数の限界を指定
+```
+
+- 8 回の衆院選に出馬した立候補者数を「総選挙ごとに」知りたい場合  
+
+```{r}
+hr_elec <- hr %>% 
+  group_by(year) %>% 
+  summarize(frequence = n(), .groups = "drop")
+```
+
+```{r}
+DT::datatable(hr_elec)
+```
+
+- 8 回の衆院選に出馬した立候補者数を「政党別に」知りたい場合  
+
+```{r}
+hr_party <- hr %>% 
+  group_by(seito) %>% 
+  summarize(frequence = n(), .groups = "drop")
+```
+
+```{r}
+DT::datatable(hr_party)
+```
+
+- 8 回の衆院選への出馬回数を所属政党と立候補者別に知りたい場合  
+
+```{r}
+hr_cand <- hr %>% 
+  group_by(seito, j_name) %>% 
+  summarize(frequence = n(), .groups = "drop")
+```
+
+```{r}
+DT::datatable(hr_cand)
+```
+
+- 8 回の衆院選での当選者（復活当選者を含む）を政党別に知りたい場合  
+
+```{r}
+hr_winner <- hr %>% 
+  filter(wl > 0) %>% 
+  group_by(seito) %>% 
+  summarize(frequence = n(), .groups = "drop")
+```
+
+```{r}
+DT::datatable(hr_winner)
+```
+
+
+# 6. 惜敗率の計算方法（2021年総選挙）  
+- 1996年から2021年総選挙結果から 2021年総選挙データだけを抜き出し「惜敗率」を計算してみる  
+
+- 惜敗率を求める式は次のとおり  
+
+$$惜敗率 = \frac{自分の得票数}{当選者の得票数}$$    
+
+- 当選者の惜敗率は 1  
+- 当選者以外の惜敗率は 0 と 1 の間の値  
+
+```{r}
+hr_2021 <- hr %>% 
+  filter(year == 2021)
+```
+
+- `hr` が含む変数は次のとおり  
+
+```{r}
+names(hr_2021)
+```
+
+- 惜敗率を計算するために必要な変数は次のとおり  
+1. ku  
+2. kun  
+3. vote  
+4. rank  
+
+- 惜敗率を計算するために必要な変数だけに絞る  
+```{r}
+hr_2021 <- hr_2021 %>% 
+  select(ku, kun, rank, wl, seito, j_name, previous, gender, age, vote)
+```
+
+```{r}
+unique(hr_2021$ku)
+```
+
+```{r}
+unique(hr_2021$kun)
+```
+
+- `ku` と `kun` を使って `district` という名前の変数をつくる  
+- 例）「宮城6区」: ku　(`miyagi`) と kun (`6`) => `miyagi_6`     
+
+```{r}
+df_rank1 <- hr_2021 %>% 
+    mutate(
+      district = str_c(ku, kun, sep = "_")
+      ) %>% 
+    filter(rank == 1) %>% # ランク1位の候補者だけに絞る
+    select(district, rank1_vote = vote)
+```
+
+```{r}
+df_sekihai <- hr_2021 %>% 
+    mutate(
+      district = str_c(ku, kun, sep = "_")
+      ) %>% 
+    left_join(df_rank1, by = "district") %>% 
+    arrange(district, rank) %>% 
+    mutate(
+        sekihai = vote / rank1_vote
+    )
+```
+
+```{r}
+df_sekihai <- df_sekihai %>% 
+  select(district, rank, wl, seito, j_name, previous, gender, age, vote, sekihai)
+```
+
+```{r}
+DT::datatable(df_sekihai)
+```
+
+
+
+
+# 7. 選挙の強さ: `Margin`（1996-2021）  
+
+- 惜敗率でわかるのは、小選挙で落選した「当選者以外」の選挙での強さ    
+
+$$惜敗率 = \frac{次点者の票数}{当選者の票数}$$  
+
+- 惜敗率は 0 と 1 の間の値  
+- 小選挙区当選者の惜敗率は全員 1  
+→ 小選挙区当選者間の強さの違いはわからない  
+
+- **[当選者を含めた選挙の強さ  (`Margin`)を知りたい場合]{style="color:red"}**    
+→　ひと工夫必要  
+
+$$当選者のMargin = \frac{当選者の票数}{次点者の票数}$$  
+
+- 当選者の Marginは 1 以上の値  
+- 小選挙区の**落選者**の Margin は「惜敗率」を使う (0〜1)  
+- 小選挙区の**当選者**の Margin は「当選者の Margin」を使う (1以上)    
+→ **[小選挙区の当選者と落選者、両方の選挙の強さを比較できる]{style="color:blue"}**  
+
+- `hr` が含む変数は次のとおり  
+
+```{r}
+names(hr)
+```
+
+- `Margin` を計算するために必要な変数は次のとおり  
+1. year  
+2. ku  
+3. kun  
+4. vote  
+5. rank  
+
+- Margin を計算するために必要な変数だけに絞る  
+```{r}
+hr_margin <- hr %>% 
+  select(year, ku, kun, rank, j_name, vote)
+```
+
+- `ku` の中身を確認する  
+
+```{r}
+unique(hr_margin$ku)
+```
+- `kun` の中身を確認する  
+
+```{r}
+unique(hr_margin$kun)
+```
+
+```{r}
+calculate_margin <- function(data) {
+  dat1 <- data %>% 
+    arrange(rank) %>% 
+    mutate(
+      rank1_vote = if_else(rank == 1, vote, NA_real_),
+      rank2_vote = if_else(rank == 2, vote, NA_real_)
+    ) %>% 
+    fill(rank1_vote, rank2_vote, .direction = "downup") %>% 
+    mutate(
+      divide_vote = if_else(rank == 1, rank2_vote, rank1_vote),
+      margin = vote / divide_vote
+    )
+  return(dat1)
+}
+```
+
+- `year` と `ku` と `kun` を組み合わせて `district` という名前の変数をつくる  
+- 例）`year` (1996) + `ku` (miyagi) + `kun` (6) => `district` (1996_miyagi_6)    
+
+```{r}
+hr_margin <- hr_margin %>% 
+  mutate(
+    district = str_c(year, ku, kun, sep = "_") # year を忘れずに  
+  ) %>% 
+  group_nest(district) %>% 
+  mutate(
+    margin_vote = map(data, calculate_margin)
+  ) %>% 
+  select(district, margin_vote) %>% 
+  unnest(margin_vote)
+```
+
+```{r}
+reactable::reactable(hr_margin,
+  filterable = TRUE,  # 検索可能に設定
+  defaultPageSize = 10) # 表示行数の限界を指定
+```
+
+```{r}
+hr_margin <- hr_margin %>% 
+  select(year, margin, j_name)
+```
+
+```{r}
+abe_ishiba_margin <- hr_margin %>%
+  filter(j_name == "石破茂" | j_name == "安倍晋三") %>%
+  select(year, margin, j_name)
+```
+
+```{r}
+ggplot(data = abe_ishiba_margin, aes(x = year, y = margin, colour = j_name, linetype = j_name, shape = j_name)) +
+  geom_point() +
+       geom_line() + 
+  ggtitle("安倍晋三氏と石破茂氏の Margin : 1996-2021衆院選") +
+  geom_text(
+    aes(y = margin + 0.1, 
+        label = round(margin, digits = 1), vjust = 0)
+    ) +
+  theme(legend.position = c(0.9, 0.1)) +
+  labs(x = "総選挙年", y = "Margin")　
+```
+
+- ここで「3.3.4 安倍晋三氏と石破茂氏の得票率」で求めた安倍氏と石橋の「得票率」と比較してみよう
+
+```{r}
+vs_abe_ishiba
+```
+
+
+
+<div class="kakomi-box11"><span class="title-box11">解釈
+</span>
+・**得票率**という観点からみると、2009年総選挙までは安倍晋三氏の得票率が高いが、2012年総選挙以降は石破茂氏のが高い  
+・**次点者との差**という観点からみると、9回の総選挙中、安倍晋三氏の方が石破茂氏より勝っているのは6回、石破茂氏の方が安倍晋三氏より勝っているのは3回  
+→ **次点者との差**という観点から見た `Margin` では2014年と2021年総選挙も含め安倍晋三氏の方が強いと言える
+
+</div>    
+
+
+
+# 8. 2021年自民党総裁選に出馬者の選挙成績 (`margin`)  
+
+**得票率**
+```{r}
+hr_vs <- hr %>% 
+  select(year, voteshare, j_name)
+```
+
+```{r}
+ldp_pres_vs <- hr_vs %>%
+  filter(j_name == "岸田文雄" | j_name == "高市早苗"| j_name == "河野太郎"| j_name == "野田聖子")
+```
+
+```{r}
+ggplot(data = ldp_pres_vs, aes(x = year, y = voteshare, colour = j_name, linetype = j_name, shape = j_name)) +
+  geom_point() +
+       geom_line() + 
+  ggtitle("2021自民党総裁選立候補者の得票率:1996-2021") +
+  geom_text(
+    aes(y = voteshare + 0.1, 
+        label = round(voteshare, digits = 1), vjust = 0)
+    ) +
+  theme(legend.position = c(0.9, 0.2)) +
+  labs(x = "総選挙年", y = "得票率(%)")
+```
+
+**Margin**  
+```{r}
+hr_margin <- hr_margin %>% 
+  select(year, margin, j_name)
+```
+
+```{r}
+ldp_pres_margin <- hr_margin %>%
+  filter(j_name == "岸田文雄" | j_name == "高市早苗"| j_name == "河野太郎"| j_name == "野田聖子") 
+```
+
+```{r}
+ggplot(data = ldp_pres_margin, aes(x = year, y = margin, colour = j_name, linetype = j_name, shape = j_name)) +
+  geom_point() +
+       geom_line() + 
+  ggtitle("2021自民党総裁選立候補者の選挙マージン:1996-2021") +
+  geom_text(
+    aes(y = margin + 0.1, 
+        label = round(margin, digits = 1), vjust = 0)
+    ) +
+  theme(legend.position = c(0.6, 0.8)) +
+  labs(x = "総選挙年", y = "Margin")
+```
+
+
+
+**参考文献**    
+<ul>
+<li>[宋財泫 (Jaehyun Song)・矢内勇生 (Yuki Yanai)「私たちのR: ベストプラクティスの探究」](https://www.jaysong.net/RBook/)</li>  
+<li>[土井翔平（北海道大学公共政策大学院）「Rで計量政治学入門」](https://shohei-doi.github.io/quant_polisci/data-import.html)</li>
+<li>[矢内勇生（高知工科大学）授業一覧](http://yukiyanai.github.io/teaching/)</li>  
+<li>[第49回衆議院議員総選挙データ: 2021 Japanese General Election Data](https://yukiyanai.github.io/jp/resources/data/hr2021election.html)  
+<li>浅野正彦, 矢内勇生.『Rによる計量政治学』オーム社、2018年</li>
+<li>浅野正彦, 中村公亮.『初めてのRStudio』オーム社、2018年</li>
+<li>Winston Chang, R Graphics Cookbook, O'Reilly Media, 2012.</li>
+<li>Kieran Healy, DATA VISUALIZATION, Princeton, 2019</li>
+<li>Kosuke Imai, Quantitative Social Science: An Introduction, Princeton University Press, 2017</li>
+</div>
+</div>
