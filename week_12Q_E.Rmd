@@ -1,0 +1,132 @@
+---
+title: "Week 12: Quiz"
+author: "Your name"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+
+<style>
+
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```  
+
+
+- 分析に必要なパッケージをロードする  
+```{r, message = FALSE, warning = FALSE}
+library(interplot)
+library(jtools)
+library(margins)
+library(msm)
+library(patchwork)
+library(stargazer)
+library(tidyverse)
+```  
+
+
+# 3. Excercise. 
+- You want to investigate whether the impact of campaign expenses on the vote percentage differs between Democratic Party（民主）candidates and candidates from other parties.  
+- The data to be used here consists of general election results conducted from 1996 to 2021: [hr96-21.csv](http://asanoucla.github.io/hr96-21.csv).  
+- This dataset contains the following 23 variables.
+
+| variable| detail |
+|:---------------|:-----------------------|
+| year|Election year (1996-2017) |
+| pref |Prefecture|
+| ku |Electoral district name|
+| kun  |Number of electoral district |
+| rank |Ascending order of votes|
+| wl | 0 = loser / 1 = single-member district (smd) winner / 2 = zombie winner|
+| nocand  |Number of candidates in each district|
+| seito  |Candidate's affiliated party (in Japanese)|
+| j_name  | Candidate's name (Japanese)|
+| name  | Candidate's name (English)|
+| previous  | Previous wins|
+| gender |Candidate's gender:"male", "female"|
+| age  | Candidate's age|
+| exp  | Election expenditure (yen) spent by each candidate |
+| status|0 = challenger / 1 = incumbent / 2 = former incumbent|
+| vote |votes each candidate garnered|
+| voteshare  |Voteshare (%) |
+| eligible  |Eligible voters in each district|
+| turnout  | Turnout in each district (%)|
+| castvote  | Total votes cast in each district |
+| seshu_dummy  | 0 = Not-hereditary candidates, 1 = hereditary candidate|
+| jiban_seshu|Relationship between candidate and his predecessor|
+| nojiban_seshu |Relationship between candidate and his predecessor|
+|     |    |
+
+- Please extract data from 2009 and the following 6 variables for analysis:  
+
+|Variable Names|Description|
+|:---|:---|
+|voteshare|Vote Percentage (%)
+|
+|exppv|Campaign Expenses per Eligible Voter (yen) |
+|dpj|Democratic Party Dummy (Democratic Party Candidate = 1, Other Candidates = 0)  |
+|previous|Number of Previous Wins by the Candidate|
+|age|Age of the Candidate|
+|nocand|Number of Candidates in the Election|
+
+- `Note 1`: The variable dpj is not included in the dataset, so you should create it individually using the seito or party variable.  
+- `Note 2`: The variable exppv is not included in the dataset, so you should create it individually using the exp and eligible variables.
+
+**Q1**: Display descriptive statistics for the above three variables.  
+
+**Q2**: Display a scatter plot of campaign expenses and vote percentage and provide a brief comment.  
+
+**Q3**: State your hypothesis regarding whether the impact of campaign expenses on vote percentage differs between Democratic Party candidates and candidates from other parties in House of Representatives elections. Also, briefly explain the reasoning behind your hypothesis.  
+
+**Q4**: Can we say that the impact of campaign expenses on vote percentage is different between Democratic Party candidates and candidates from other parties? Use the msm package to visualize the marginal effect of campaign expenses on vote percentage for both Democratic Party candidates and other candidates, and explain the results succinctly.
+ 
+
+
+
+
+
