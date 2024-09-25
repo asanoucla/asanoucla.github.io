@@ -1,0 +1,116 @@
+---
+title: "Week 5: 問題"
+author: "Your name"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+
+<style>
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+</style>
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```
+
+
+
+# 3 Exercise  
+
+- **Q3.1**:  
+In reference to `2.4 Add another dimension`, draw a histogram of vote share (**voteshare**) for the LDP (Liberal Democratic Party) and CDP (Constitutional Democratic Party) candidates in the 2021 lower house election.  
+・You see the party name in variable, **seito** in `hr96_21.csv`    
+・You need to use `geom_histogram()` to draw a histogram.  
+・You need to pay attention to the hidden values behind the bars in drawing a histogram.  
+
+
+- **Q3.2**:  
+In reference to `2.4 Add another dimension`, draw a histogram of vote share (**voteshare**) for the LDP (Liberal Democratic Party) and CDP (Constitutional Democratic Party) and JCP (Japan Communist Party) candidates in the 2021 lower house election.  
+・You see the party name in variable, **seito** in `hr96_21.csv`  
+・You need to use `geom_histogram()` to draw a histogram.  
+・You need to pay attention to the hidden values behind the bars in drawing a histogram.  
+
+
+In answering **Q3.1** and **Q3.2** questions, use [hr96-21.csv](https://asanoucla.github.io/hr96-21.csv)  
+・`hr96_21.csv` is a collection of Japanese lower house election data covering 9 national elections (1996, 2000, 2003, 2005, 2009, 2012, 2014, 2017, 2021)  
+・You need the following three variables which are included in `hr96_21.csv` to draw histograms:  
+
+| variable      | detail   |
+|:---------------|:-------------------------------------------------------|
+|year  | Election year (1996-2021)|    
+|voteshare     | Vote share (%)|
+|seito | Candidate's affiliated party (in Japanese) |
+|||  
+
+
+・`hr96_21.csv` contains the following 23 variables:  
+
+| variable      | detail   |
+|:---------------|:-------------------------------------------------------|
+| year  | Election year (1996-2021)     |
+| pref  | Prefecture    |
+| ku    | Electoral district name       |
+| kun   | Number of electoral district  |
+| rank  | Ascending order of votes      |
+| wl    | 0 = loser / 1 = single-member district (smd) winner / 2 = zombie winner |
+| nocand| Number of candidates in each district      |
+| seito | Candidate's affiliated party (in Japanese) |
+| j_name| Candidate's name (Japanese)   |
+| name  | Candidate's name (English)    |
+| previous      | Previous wins |
+| gender| Candidate's gender:"male", "female"|
+| age   | Candidate's age       |
+| exp   | Election expenditure (yen) spent by each candidate |
+| status| 0 = challenger / 1 = incumbent / 2 = former incumbent   |
+| vote  | votes each candidate garnered |
+| voteshare     | Vote share (%)|
+| eligible      | Eligible voters in each district   |
+| turnout       | Turnout in each district (%)  |
+| castvote      | Total votes cast in each district  |
+| seshu_dummy   | 0 = Not-hereditary candidates, 1 = hereditary candidate |
+| jiban_seshu   | Relationship between candidate and his predecessor |
+| nojiban_seshu | Relationship between candidate and his predecessor |
+|       |  |
+
+
+
