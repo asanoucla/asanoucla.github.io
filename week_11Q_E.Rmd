@@ -1,0 +1,77 @@
+---
+title: "Week 11: Quiz"
+author: "Your name"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: journal
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+
+<style>
+
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```  
+#### 4. Exercise     
+
+- [hr96-21.csv](https://asanoucla.github.io/hr96-21.csv) is a dataset containing the results of 9 House of Representatives elections held in Japan since the introduction of single-member districts in 1996 (1996, 2000, 2003, 2005, 2009, 2012, 2014, 2017, 2021).  
+- Extract the data for the 2005 House of Representatives election from this dataset and perform a multiple regression analysis using the following 3 variables (`voteshare`, `exppv`, `jcp`):
+
+|Variable Type|Variable Name|Description|
+|:----|:--|:---------------|
+|Response Variable|`voteshare`|Vote share (%)|
+|Predictor Variable|`exppv`|Election expenses per eligible voter (in yen)|
+|Control Variable|`jcp`|Communist Party Dummy (Communist Party candidate = 1, others = 0)|
+|||  
+
+- Note: You need to create the jcp dummy yourself.  
+**Q1**: Use `stargazer()` to display the descriptive statistics for the three variables (`voteshare`, `exppv`, `jcp`) for the 2005 House of Representatives election.  
+**Q2**: Create a scatter plot for `exppv` and `voteshare`. Also, include the regression line.  
+**Q3**: Create a scatter plot for `jcp` and `voteshare`. Also, include the regression line.  
+**Q4**: Perform a multiple regression analysis with `voteshare` as the response variable and `exppv` and `jcp` as predictor variables. Show the multiple regression equation and interpret the results.  
+**Q5**: Create a scatter plot for `voteshare` with `exppv` and jcp as predictor variables.  
+Differentiate the observations and regression lines by the dummy variable `jcp.` If you are plotting in black and white, consider changing the shape of the scatter plot dots or using two different types of regression lines.
