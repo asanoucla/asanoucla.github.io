@@ -1,0 +1,2310 @@
+---
+title: "33. ロジスティック回帰分析"
+author: "Masahiko Asano"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide  # Hide the chunk
+    theme: journal
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+
+<style>
+
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ- 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```
+
+Rを使った分析の準備  
+
+- ここで使うRのパッケージは次のとおり。
+
+```{r, message = FALSE}
+library(corrplot)
+library(jtools)
+library(margins)
+library(ROCR)
+library(patchwork)
+library(prediction)
+library(stargazer)
+library(tidyverse)
+```
+
+# 1. 重回帰分析とロジスティック回帰分析の違い  
+## 1.1 線形回帰と非線形回帰  
+線形回帰と非線形回帰の違い
+- 選挙での「候補者の成績」と「選挙で使うお金の額」の関係を調べたいとする  
+→　つまり、お金を使う候補者ほど選挙結果がいいのか？という疑問  
+
+- 説明したい対象（＝応答変数）としては 2 つ想定できる：  
+①得票率（もしくは得票数）　　　　　・・・連続変数 => [回帰分析 ]{style="color:blue"}  
+②当落・・・当選したら1 、落選したら 0 ・・・2値変数 => [ロジスティック回帰分析]{style="color:red"}   
+
+-  回帰分析とロジスティック回帰分析の違いを視覚的に示してみる
+
+||[回帰分析]{style="color:blue"}|[ロジスティック回帰分析]{style="color:red"}|
+|:--------|:----------|:---------------|
+| 応答変数| [得票率(%)]{style="color:blue"} |[当落(0 or 1)]{style="color:red"}|
+| 説明変数|[選挙費用（百万円）]{style="color:blue"}| [選挙費用（百万円）]{style="color:red"}|
+|||
+
+
+```{r, echo = FALSE, out.width="100%", out.height="100%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_1E.png")
+```  
+#### 主要な違い  
+・回帰分析の応答変数は得票率＝「連続変数」    
+・ロジスティック回帰分析の応答変数は選挙での当落＝ 2 値変数 (1 or 0)  
+・それぞれの図に回帰直線を図に書き入れてみる
+
+
+```{r, echo = FALSE, out.width="100%", out.height="100%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_2.png")
+```  
+・回帰分析では、選挙費用を使うほど得票率が大きくなっている => 問題なし  
+・ロジスティック回帰分析でも、選挙費用を使うほど得票率が大きくなっている  
+→　しかし、3つ問題点がある  
+1. 当選確率（0〜1）が 1 (100%) を超えてしまうこと  
+2. 当選確率（0〜1）がマイナスの値をとってしまうこと  
+3. 当てはまり感がない（むりやり当てはめている感が強い）
+
+## 1.2 ロジット変換  
+- 「ロジスティック回帰分析」とは、2値変数をロジット変換した回帰分析 
+
+### ロジット変換とは  
+- 2値を表す散布図を「率」に変換すると S 字になる（左の図 → 中央の図）  
+- 率を**[ロジット変換]{style="color:blue"}**すると直線になる（中央の図 → 右の図）    
+- ロジスティック回帰分析ではこの数学の特徴を使う  
+
+```{r, echo = FALSE, out.width="100%", out.height="100%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_3.png")
+```  
+
+- 選挙での「当落」（左側の図）の代わりに「当選率」を考えてみる（中央の図）  
+- 選挙費用ごとにどれくらいの割合が当選しているかを棒グラフで表してみる  
+- 中央の「当選率」の棒グラフを見ると・・・    
+
+```{r, echo = FALSE, out.width="100%", out.height="100%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_4.png")
+```  
+
+
+・選挙費用が少ない200万円以下の人はほとんど当選していない  
+・選挙費用が1000万円の候補者は50%程当選している    
+・選挙費用が1600万円の候補者は75%以上が当選している  
+・選挙費用ごとの「当選率」の対数をとって**[ロジット変換]{style="color:blue"}**する  
+→　Ｓ字が直線になる  
+→　しかし、実際のデータを使うと完璧な直線ではないものの、かなり直線ぽくなる  
+→　この曲線を使ってロジスティック回帰分析を推定する  
+
+- 2値変数をロジットに変換してから回帰分析を行う→ロジスティック回帰分析と呼ばれる  
+
+
+
+
+**[・ロジスティック回帰分析では「割合」ではなく「オッズ」で結果が示される]{style="color:red"}**    
+
+::: {.kakomi-box11}
+[割合・オッズ・オッズ比・ロジット変換]{.title-box11} 
+
+#### 割合とオッズ (`odds`) の違い  
+- 例えば、選挙費用を800万円使う候補者は100人いる  
+- そのうち当選したのは60人で落選したのは40人  
+- この場合の当選者の「割合」と「オッズ」は次のように計算できる  
+
+```{r, echo = FALSE, out.width="80%", out.height="80%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_7.png")
+```   
+
+- 「割合」は 1 を超えることはない  
+- しかし、「オッズ」は 1 を超えることはある  
+- 「割合」も「オッズ」もどちらも起こりやすさを示す指数  
+
+#### オッズとは    
+-   ある事象が起こる確率 <span class="math inline">$\mathrm{p}$
+    と起こらない確率 $\mathrm{1 - p}$ との比
+
+`p`: ある事象が起こる確率\
+`1-p`: ある事象が起こらない確率
+
+$$Odds = \frac{p}{1-p}$$
+ 例1：  
+・当選確率が75% ($p = 0.75$) の場合のオッズ    
+
+$$Odds = \frac{p}{1-p} = \frac{0.75}{0.25} = 3$$
+・「オッズが3」という意味は  
+→「3対1で勝つ見込みがある」という意味  
+
+```{r, echo = FALSE, out.width="100%", out.height="100%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_01.png")
+```
+
+例2：  
+起こる確率が1% (`p = 0.01`）の場合の `Odds` を計算してみる  
+・`p = 0.01`, `1-p = 1-0.01= 0.99` を Odds を求める式に代入する
+
+$$Odds = \frac{p}{1-p} = \frac{0.01}{0.99} = \frac{1}{99} = 0.01$$  
+・起こる確率が1% (`p = 0.01`）の場合の `Odds`は0.01  
+→「0.01対1で勝つ見込みがある」という意味  
+→「1対100で勝つ見込みがある」  
+→「100回に1回だけ勝つ見込みがある」
+
+
+::: {.kakomi-box11}
+[オッズの特徴]{.title-box11}・オッズが大きいほど、その事象 `(p)`
+が起こりやすい\
+・オッズの最小値は 0\
+・オッズ = 1 は「その事象 `(p)` が起こる確率が 50%」という意味\
+・オッズの最大値は無限大 (`∞`)\
+:::
+
+
+#### オッズ比とは    
+・2つのグループ間のオッズの比  
+
+$$OddsRatio = \frac{odds_1}{odds_2}$$
+例：  
+男性候補者の当選オッズ = 3   
+女性候補者の当選オッズ = 2  
+
+$$OddsRatio = \frac{odds_{male}}{odds_{female}} = \frac{3}{2} = 1.5$$
+・「男性候補者は女性より1.5倍当選しやすい」と解釈する  
+
+#### ロジット変換とは  
+・ロジット変換とは 2 値変数 (0 or 1) のオッズの対数をとること  
+・`odds` の下限は 0 なので、説明変数としては扱いにくい\
+→ `odds` を対数変換し[「対数オッズ」]{style="color:red"} を計算する  
+→　これが[`log(odds)` = `log-odds` = `logit`]{style="color:red"}   
+・統計モデリングの文脈では `logit` と呼ばれる  
+
+$$log(odds)  =log\frac{p}{1-p}$$
+
+- 確率 (p, 1-p)、odds、log(odds)の関係は次のとおり  
+
+```{r, echo = FALSE, out.width="90%", out.height="90%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_03.png")
+```
+
+
+::: {.kakomi-box11}
+[`log-odds`の特徴]{.title-box11}
+・最小値も最大値もどちらも無限大 (`∞`)\
+・`log-odds = 0` が意味するのは「その事象 `(p)` が起こる確率が
+50%」という意味
+:::
+
+:::
+
+
+# 2. 推定方法の違い  
+
+|||
+|:-----|:----------------|
+|重回帰分析|最小二乗法 (`OLS: Ordinary Least Square`)|
+|**[ロジスティック回帰分析]{style="color:blue"}**|**[最尤推定法 (`MLE: Maximum Likelihood Estimation`)]{style="color:blue"}**|
+|||
+
+## 2.1 最尤推定法とは　　
+- 最尤推定法（さいゆうすいていほう）とは、既に起きたことに対して、その背景にあることの可能性の大きさを推定する方法  
+- ここでは「確率」と「尤度（ゆうど）」の違いを比較しながら、最尤推定法を解説する  
+
+### 2.1.1 確率と尤度（ゆうど）の違い  
+
+|||
+|:-|:----------------|
+|確率|**これから起きること**の可能性の大きさ|
+|**[尤度]{style="color:blue"}**|[**既に起きたこと**に対して、その背後にある可能性の大きさ]{style="color:blue"}|
+|||
+
+
+### 確率 (Probability)  
+
+- 中が見えない袋の中に赤玉が3個と白玉が2個、合わせて5個入っている  
+- この袋から1個玉を取り出し、玉の色を確かめて袋に戻す  
+- この作業を3回繰り返す  
+
+::: {style="text-align: center;"}
+![](graphs_tables/irt_01.png){width="600"}
+:::
+
+#### 結果：  
+- 1回目・・・赤  
+- 2回目・・・白   
+- 3回目・・・赤  
+
+##### 問題：
+- 結果が「赤、白、赤」になる確率は？  
+- 「積の公式」を使って計算できる  
+
+$$\frac{3}{5} × \frac{2}{5} × \frac{3}{5} = \frac{18}{125}$$  
+
+- しかし「積の公式」を使うためには  
+→　「毎回、玉を取り出すことは互いに独立していて、互いに影響しあわない」という**[「局所独立の仮定」]{style="color:blue"}**が必要  
+
+
+### 尤度 (likelyfood)  
+- 中が見えない袋の中に赤玉と白玉が合わせて5個入っている  
+- この袋から1個玉を取り出し、玉の色を確かめて袋に戻す  
+- この作業を3回繰り返した  
+
+##### 結果：  
+- 結果は、1回目は赤、2回目は白、3回目は赤  
+
+##### 問題：
+このような結果が得られるためには、もともと袋の中に赤玉と白玉、それぞれ何個ずつ入っていた可能性が最も高いか？
+
+::: {style="text-align: center;"}
+![](graphs_tables/irt_03.png){width="400"}
+:::
+
+- これから起こることを予測する確率の場合と異なり、玉は既に取り出されている  
+- 取り出された玉の結果（＝赤、白、赤）から、中が見えない袋の中の赤玉と白玉の個数を推定したい  
+- 既に起きたことに対して、その背後にある可能性の大きさを推定するのが**尤度**   
+- 赤玉と白玉の個数はそれぞれ何個が妥当なのか？  
+- それぞれの玉の個数の場合ごとの**尤度**を計算してみる
+
+|||
+|:-------------|:----------------|
+|玉の個数|**尤度**|
+|赤1個、白4個の場合|$\frac{1}{5}×\frac{4}{5}×\frac{1}{5}= \frac{4}{125}$|
+|赤2個、白3個の場合|$\frac{2}{5}×\frac{3}{5}×\frac{2}{5}= \frac{12}{125}$|
+|**[赤3個、白2個の場合]{style="color:blue"}**|**[$\frac{3}{5}×\frac{2}{5}×\frac{3}{5}= \frac{18}{125}$]{style="color:blue"}**|
+|赤4個、白1個の場合|$\frac{4}{5}×\frac{1}{5}×\frac{4}{5}= \frac{16}{125}$|
+|||  
+
+- 取り出された玉の色が「赤、白、赤」という結果を踏まえると  
+→　もっとも（最も）もっとも（尤も）らしいのは「赤3個、白2個」の場合
+
+
+::: {.kakomi-box11}
+[ポイント]{.title-box11}
+・ロジスティック回帰分析では**[最尤推定法(MLE)]{style="color:blue"}**という推定法を採用している  
+・MLE: Maximum Likelihood Estimation  
+
+#### ロジスティック回帰分析で推定したいもの  
+- 例えば、`選挙費用 (X) → 当落 (Y)` という関係を分析したいとする  
+- 選挙費用 (X) は観測された（固定された）データなので推定できない  
+
+##### 推定したいもの　→　選挙費用の回帰係数（選挙費用が当落に与える影響）    
+- 候補者の当落確率をモデルの形で計算  
+→　最も尤度が高くなる係数の組み合わせを「推定値」とする
+
+
+- ロジスティック回帰分析における**尤度**とは:  
+- ロジスティック回帰モデル全体が、観測された「当落データ」をどれだけうまく説明できるかの確率のこと  
+→ すなわち、全候補者分の「当選／落選」という観測値が実際に起きる確率  
+:::
+
+# 3. ロジスティック回帰分析 (1)  
+### ｘが連続変数の場合
+
+- ロジスティック回帰分析の手順は次のとおりである
+
+1. 対立仮説と帰無仮説を設定する\
+2. 説明変数と応答変数の散布図を表示する\
+3. ロジスティック回帰式を求める\
+4. 回帰係数の有意性を検定する\
+5. 推定結果の意味を解釈する
+6. ロジスティック回帰モデルの当てはまり具合を評価する  
+
+## [3.1 対立仮説と帰無仮説を設定する]{style="color:green"}  
+
+- ここで[**検証したい仮説（＝対立仮説）**]{style="color:blue"}は次のとおり
+
+::: {.kakomi-box11}
+[仮説1]{.title-box11}・選挙費を使えば使うほど、小選挙区での当選確率は大きい
+:::
+
+- 従って、否定されるために設定する[**帰無仮説**]{style="color:red"}は次のようになる
+
+::: {.kakomi-box11}
+[帰無仮説]{.title-box11} ・選挙費の額は、小選挙区での当選確率とは関係がない\
+:::
+
+- ロジスティック回帰分析における検定では、重回帰分析における検定と同様、得られた
+`p 値`
+が有意水準よりも小さいときに帰無仮説を棄却し、対立仮説を受け容れる
+
+- 仮説1を検証するために次のモデルを考える
+
+#### Model 1   
+
+```{r, echo = FALSE, out.width="70%", out.height="70%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_f08.png")
+```
+
+- ダウンロードした
+2021年衆院選挙データを使い、候補者の小選挙区における当落
+(`wlsmd`) を縦軸に、選挙費用 (`expm`)
+を横軸にした散布図を表示する
+
+**データの準備 (`hr96-24.csv`)**  
+
+
+#### ggplot2のテーマとフォントの設定を行う
+
+```{r}
+if (.Platform$OS.type == "windows") { # Windows の場合 
+  if (require(fontregisterer)) {
+    my_font <- "Yu Gothic"
+  } else {
+    my_font <- "Japan1"
+  }
+} else if (capabilities("aqua")) {　# Macの場合 
+  my_font <- "HiraginoSans-W3"
+} else {
+  my_font <- "IPAexGothic"         # Linuxなどその他の場合
+}
+
+theme_set(theme_gray(base_size = 9,
+                     base_family = my_font))
+```
+
+- 衆議院議員総選挙の得票データ[`hr96-24.csv`](https://asanoucla.github.io/hr96-24.csv) をダウンロード
+
+データのダウンロードが終わったら、データを読み込み `hr` と名前を付ける。
+
+```{r}
+hr <- read_csv("data/hr96-24.csv", na = ".")
+```
+
+データフレーム `hr` の中身を表示する
+
+```{r, comment = ""}
+names(hr)
+```
+
+- `select()` 関数を使って `year`, `wl`, `previous`, `exp` という 4
+つの変数だけを選ぶ\
+- `filter()` 関数を使って 2021年衆院選だけのデータを残す\
+- `wl` の中身を確認  
+
+```{r}
+unique(hr$wl)
+```
+- 0・・・小選挙区での落選  
+- 1・・・小選挙区での当選  
+- 2・・・復活当選  
+
+- `wl` を使って、選挙結果を示す変数 `wlsmd` （1 = 小選挙区当選、0 = その他）を作る     
+- `exp` を使って、選挙費用を示す変数 `expm`（単位は「百万円」）を作る
+
+```{r}
+hr21 <- hr %>%
+  select(year, wl, previous, exp) %>%
+  filter(year == 2021) %>% 
+  mutate(wlsmd = ifelse(wl == 1, 1, 0)) |> 
+  mutate(expm = exp / 1000000) |> 
+  
+  select(year, wlsmd, expm, previous)
+```
+
+データフレーム `hr21` の中身を表示する
+
+```{r, comment = ""}
+hr21
+```
+
+**データ**：\
+
+|変数名|詳細|
+|---|-----------------------|
+|`year`|衆院選が行われた年|
+|`wlsmd`|小選挙区での当落ダミー(当選 = 1, 落選 = 0)|
+|`previous`|当選回数|
+|`expm`|候補者の選挙費用（百万円）|
+|||
+
+- データフレーム hr21 の記述統計を表示させる
+
+```{r, comment = ""}
+summary(hr21)
+```
+
+- データフレーム `hr21` の `expm` に欠損値 (`missing data = NA's`)
+が22個あることがわかる\
+- `na.omit()` を使って欠測のない観測だけを残す
+
+```{r}
+hr21 <- na.omit(hr21)
+```
+
+- データフレーム `hr21` の記述統計を表示して確認する
+
+```{r, comment = ""}
+summary(hr21)
+```
+
+- 22個の `NA's` が消えていることがわかる　　
+
+
+
+## [3.2 説明変数と応答変数の散布図を表示する]{style="color:green"}  
+- 分析で使うデータ (`hr21`) の記述統計を表示  
+```{r, results = "asis"}
+stargazer::stargazer(as.data.frame(hr21), 
+  type = "html")
+```
+
+- 当選回数と当落の散布図を描く. 
+- 2つの変数の関係を図示してみる  
+- 文字化けを避けるため、Macユーザは次の2行を実行する  
+```{r}
+theme_set(theme_gray(base_size = 10, 
+                     base_family = "HiraginoSans-W3"))
+```
+
+- `wlsmd` が 2 値変数 (0 or 1) なので、`jitter()`関数を使ってデータを散らして表示させる  
+
+```{r}
+p <- ggplot(hr21, aes(x = expm, y = wlsmd)) + 
+  geom_jitter(size = 1,        # データを散らして表示させる指定
+              alpha = 1/3,
+              width = 0,
+              height = 0.05) +
+  labs(x = "選挙費用（100万円）",
+       y = "小選挙区での当落")
+
+plot(p)
+```
+
+- この図に**[むりやり通常の回帰直線を当てはめてみる]{style="color:blue"}**とこのようになる  
+
+```{r}
+p + geom_smooth(method = "lm", se = FALSE) +
+    annotate("label", 
+           label = "当落 (0 or 1) = a + b選挙費用", 
+           x = 6, y = 0.75,
+           size = 5, 
+           colour = "blue", 
+           family = "HiraginoSans-W3")
+```  
+
+- 応答変数が2値 (o or 1) なのに、むりやり回帰直線を当てはめた時の問題点  
+→ 応答変数（当選確率）がマイナスの値になったり、100%を超える場合がある  
+
+#### 解決策  
+- 当選確率を**[「ロジット変換」]{style="color:green"}**する  
+- 当選確率 $P$ は 0 と 1 の間の値をとる 2 値変数      
+- $\frac{P}{1-P}$ はオッズ（コラム`Logit Model の基礎知識：オッズ`を参照）
+- オッズ＝当選する確率 <span class="math inline">$\mathrm{p}$
+    と落選する確率 $\mathrm{1 - p}$ との比
+- 「当選確率$P$」と「選挙費用」、「当選回数」の関係は次の式で表現できる  
+
+$$\frac{P}{1-p} = a + 選挙費用b + 当選回数c$$
+
+- 回帰式の左辺の**[オッズ $(\frac{p}{1-P})$]{style="color:red"}**は曲線を表現している  
+- 回帰式の右辺 **[$a + 選挙費用b$]{style="color:blue"}** は直線を表現している  
+→　表現が一致していない  
+→　**[オッズ $(\frac{p}{1-P})$]{style="color:red"}**の**[対数をとる]{style="color:green"}**  
+- 当選確率 $P$ は 0 から 1 の範囲しか取れないが、オッズの対数をとると全ての実数をとれる  
+→　曲線の関係を直線の関係に変更でき、推定が可能になる ＝「ロジット変換」   
+
+$$log\frac{P}{1-p} = a + 選挙費用b + 当選回数c$$
+
+#### オッズの対数をとった曲線  
+
+```{r}
+p3 <- ggplot(hr21, aes(x = expm, y = wlsmd)) + 
+  geom_jitter(size = 1,
+              alpha = 1/3,
+              width = 0,
+              height = 0.05) +
+  geom_smooth(method = "glm", 
+    color = "red",
+    method.args = list(family = binomial(link = "logit"))) +
+  labs(x = "選挙費用（100万円）",
+       y = "小選挙区での当選確率")
+print(p3)
+```
+
+
+
+## [3.3 ロジスティック回帰式を求める]{style="color:green"}  
+
+#### [ロジスティック回帰式 (`Model 1`)]{style="color:green"}  
+
+- ここでは2021年の衆院選データを用い、選挙費用（`expm`: 単位100万円）で衆院選小選挙区での当落 (`wlsmd`) を説明するモデルを考える  
+
+**Model 1**  
+
+```{r, echo = FALSE, out.width="90%", out.height="90%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_f08.png")
+```
+
+- このモデルを式で表すとこのようになる  
+
+$$Pr(当選)=logit^{−1}(𝛼+\beta_1選挙費用 + \beta_2当選回数)$$  
+
+
+- Rでロジスティック回帰分析を行うには、一般化線形モデル (Generalized Linear Models: GLM) を当てはめるための関数 `glm()` を使う  
+- `glm()`はロジスティック回帰以外でも頻繁に使う関数  
+- この関数をロジスティック回帰分析に使うには、引数 `family = binomial(link = "logit")` を指定  
+- `logit` =「[オッズ]{style="color:red"}の[対数]{style="color:green"} 」= `log（オッズ）` = `log-odds` のこと  
+
+```{r}
+model_1 <- glm(wlsmd ~ expm + previous, 
+            data = hr21, 
+            family = binomial(link = "logit")) # 係数を「オッズの対数」に指定
+```
+
+- `tidy()` を使って、推定結果を確認する  
+```{r}
+tidy(model_1, conf.int = TRUE)
+```
+ →　表示される回帰式の係数 `estimate` は「[オッズ]{style="color:red"}の[対数]{style="color:green"}」 = `log(odds)`  
+ = `log-odds`とも呼ばれる  
+ 
+ - 当選確率を予測するためのロジスティック回帰式は次のとおり  
+
+$$Pr(当選) = logit^{-1}(\alpha + \beta_1選挙費用 + \beta_2当選回数)$$
+
+$$= \frac{1}{1+exp(-[\alpha + \beta_1選挙費用+\beta_2当選回数])}$$
+$$= \frac{1}{1+exp(-[-2.65 + 0.170[expm] + 0.34[previous]])}$$  
+
+
+- 例えば、選挙費用 (`expm`) の係数の推定値は約 0.170  
+- これは `log-odds` = `log(odds)` = `logit`    
+- もし、これが重回帰分析の結果であれば、「選挙費用が 1 単位（100 万円）増えるごとに、当選確率が 0.170 ポイント大きくなる」という意味  
+- しかし、ロジスティック回帰分析の係数は、重回帰分析の係数と同じように解釈できない  
+
+#### `log-odds` は解釈しにくい  → オッズ比や確率に変換する   
+
+
+## [3.4 回帰係数の解釈と有意性の検定]{style="color:green"}  
+### 最もシンプルな結果の示し方: `Odd Ratios`  
+- `model_1` の結果をオッズ比で表示させてみる  
+
+```{r}
+tidy(model_1, 
+  conf.int = TRUE, 
+  exponentiate = TRUE)
+```
+### Forest Plot による Odds Ratio の表示  
+```{r}
+# 結果を整形（オッズ比に変換）
+results <- tidy(model_1, conf.int = TRUE, exponentiate = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    term = recode(term,
+                  "expm" = "選挙費用（百万円）",
+                  "previous" = "当選回数"),
+    OR_label = sprintf("%.2f", estimate)   # ORを文字列化
+  )
+
+# forest plot + 数値ラベル
+ggplot(results, aes(x = estimate, y = term)) +
+  geom_point(size = 3, color = "blue") +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
+  geom_text(aes(label = OR_label), # ORを表示
+    hjust = 0.5, 
+    vjust = -2, 
+    size = 4) +  
+  labs(
+    title = "Odds Ratios from Logistic Regression",
+    x = "Odds Ratio (95% CI)",
+    y = ""
+  ) +
+  theme_minimal(base_size = 14) + # ラベルが切れないように余白
+  xlim(0, max(results$conf.high) * 1.2)   +
+   theme_bw(base_family = "HiraKakuProN-W3")
+```
+
+#### `選挙費用` の係数：`1.19` （`p-value =4.86e-13`）  
+
+- 「選挙費用を100万円増やした後のオッズ」・・・$odds_{expm + 1}$　　
+- 「選挙費用を100万円増やす前のオッズ」・・・$odds_{expm}$ 
+
+$$Odd Ratio = \frac{odds_{expm + 1}}{odds_{expm}} = 1.19$$
+
+**→　$odds_{expm + 1}$ のオッズが $odds_{expm}$ のオッズの 1.19倍になる**  
+**[→　より多く選挙費用を使うと、当選確率が上がる]{style="color:red"}**  
+
+
+#### `当選回数` の係数：`1.41` （`p-value =6.38e-22 `）  
+
+- 「当選回数を1回増やした後のオッズ」・・・$odds_{previous + 1}$　　
+- 「当選回数を1回増やす前のオッズ」・・・$odds_{previous}$ 
+
+$$OddRatios = \frac{odds_{previous + 1}}{odds_{previous}} = 1.41$$
+
+**→　$odds_{previous + 1}$ のオッズが $odds_{previous}$ のオッズの 1.41倍になる**    
+**[→　当選回数が多いと、当選確率が上がる]{style="color:red"}** 
+
+#### 統計的有意性  
+- `expm` の `p.value` は `4.86e-13`    
+- `previous` の `p.value` は `6.38e-22`  
+→　有意水準を 0.05 とすれば、いずれも変数も「影響がない」という帰無仮説を棄却できる  
+→ `expm` も `previous` も当落に正の影響があり、その効果は統計的に有意と判断する
+
+
+
+## 3.5 望ましい結果の示し方  
+
+::: {.kakomi-box11}
+[予測当選確率と限界効果]{.title-box11}  
+
+#### 予測当選確率  
+
+- 選挙費用の値ごとに候補者が当選する確率の予測値が**[当選予測確率: `0 〜 1`]{style="color:blue"}**  
+
+```{r, echo = FALSE, out.width="100%", out.height="100%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_f11.png")
+```  
+
+
+#### 限界効果   
+- ロジスティック回帰分析の係数は、重回帰分析の係数と同じように解釈できない\
+- ロジスティック曲線は直線ではない → 「曲線」\
+**→  説明変数 1単位の変化が応答変数に与える影響（＝傾き）は説明変数の値によって異なる**
+
+- 説明変数が応答変数に与える影響を考えるためには  
+→　説明変数の値を特定し（ここでは `expm`）**[「それぞれの値における影響」]{style="color:red"}**を計算する必要あり  
+→　**[限界効果 (Marginal Effects)]{style="color:red"}**  
+
+- 上図の例では、x の値 1, 5, 10, 15, 20 それぞれの時点での直線の傾きが限界効果
+:::  
+
+
+::: {.kakomi-box11}
+[`expm の係数`をどのように解釈すべきか？ ]{.title-box11}  
+
+- ここでは `expm` の係数 (`log-odds`) が `0.170` (`p-value = 4.86e-13`) という結果が得られた  
+- 重回帰分析では、線形モデル（＝直線）を分析している  
+→　説明変数の値に関わらず傾き (`= slope`) も統計的有意性も同じ   
+- しかし、ロジスティック回帰分析では非線形（＝曲線）を分析  
+→　選挙費用の大きさ次第で効果の大きさ（＝限界効果）と統計的有意性も変わる  
+→　選挙費用 (`expm`) が統計的に有意であれば選挙費用は**[「全体的にみて」]{style="color:magenta"} **当落に不の影響があり、その効果は統計的に有意   
+→　しかし、これは選挙費用と当落の「平均的な関係」を示すもの  
+→　全ての選挙費用で統計的に有意と限らない  
+→　選挙費用ごとの統計的有意性をチェックすべき  
+・もう一つの説明変数 `previous` も同様  
+:::
+
+
+### 3.5.1 予測当選確率  
+
+- 当選回数 (`previous`) が3回の候補者に関して次の二つのケースを考えてみる\
+**例1: 選挙費用を[0 円から 100
+万円に変化]{style="color:blue"}させた場合の予測当選確率**\
+**例2: 選挙費用を[100 万円から 200
+万円に変化]{style="color:blue"}させた場合の予測当選確率**
+
+#### 例1：選挙費用 (0円〜100万円)  
+- ここでは当選回数が 3 回の候補者が、選挙費用を0 円から 100 万円に変化させると、応答変数にどのような変化があるか確かめる  
+→ それぞれの**予測当選確率**を計算して差を取る\
+- 当選回数が 3 回選挙費用が 0 円の候補者の予測当選確率は、次の回帰式に、previous = 3、expm = 0 を代入すれば求められる
+
+$$Pr（当選） = \frac{1}{1+exp(-(-1.98 + 0.0735expm + 0.285previous))}$$ 
+
+- この値を R で求めてみる\
+- 当選回数が 3 回で選挙費用が 0 円の候補者の予測当選確率は
+
+```{r, comment = ""}
+p_0 <- predict(model_1, type = "response", #予測当選確率を表示したい時の指定  
+               newdata = data_frame(previous = 3, expm = 0))
+p_0
+```
+
+- 0.1642294  (= 約16.4%) である\
+- 当選回数が 3 回で選挙費用が 100 万円の候補者の予測当選確率は 　　
+
+```{r, comment = ""}
+p_1 <- predict(model_1, type = "response",
+               newdata = data_frame(previous = 3, expm = 1))
+p_1
+```
+
+- 0.1889165 (= 約18.9%)だとわかる\
+- 当選回数が 3 回の候補者が選挙費用を 0 円から 100
+万円に変化させたときの予測当選確率の変化は、上で求めた二つの確率の差
+`(p_1 - p_0)`
+
+```{r, comment = ""}
+p_1 - p_0
+```
+
+- 当選回数が 3 回の候補者が選挙費用を 0 円から 100
+万円に増やすと、[**予測当選確率は約 2.47 
+%ポイント増える**]{style="color:blue"}
+
+#### 例2: 選挙費用 (100万円 → 200万円)  
+
+- ここでは**当選回数が 3 回の候補者**が、選挙費用を[100万円から 200万円に変化]{style="color:blue"}させると、応答変数にどのような変化があるか確かめる\
+- 当選回数が 3 回で選挙費用が 200万円の候補者の予測当選確率は 0.2163539（約21.6%ポイント）  
+
+```{r, comment = ""}
+p_2 <- predict(model_1, type = "response",
+               newdata = data_frame(previous = 3, expm = 2))
+p_2
+```
+
+- 当選回数が 3 回の候補者が選挙費用を 100 万円から 200
+万円に変化させたときの予測当選確率の変化は、上で求めた二つの確率の差
+`(p_2 - p_1)` なので
+
+```{r, comment = ""}
+p_2 - p_1
+```
+
+- 当選回数が 3 回の候補者が選挙費用を 100 万円から
+200万円に増やすと、[**予測当選確率は 0.02743738 (= 約2.7% ポイント)
+増える**]{style="color:blue"}
+
+::: {.kakomi-box11}
+[まとめ]{.title-box11}
+・選挙費用を 0 円から 100 万円に増やすと、予測当選確率は 2.47%ポイント上昇する  
+・選挙費用を 100 万円から 200 万円に増やすと、予測当選確率は 2.7%ポイント上昇する  
+・選挙費用の0 円から 100 万円への変化も、100 万円から 200 万円への変化も、選挙費用の増分としては同じ  
+・しかし、それらの変化が応答変数（すなわち当選確率）に与える影響は異なる  
+・**[0 円から 100 万円への 100 万円の変化より、100 万円から 200 万円への 100 万円の変化のほうが、応答変数に与える影響が大きい]{style="color:blue"}**    
+:::  
+
+
+#### 選挙費用（100万円　→ 2800万円）
+- 選挙費用を 100万円から2800万円まで100万円ずつ増やした時の、それぞれの時点における当選確率を R を使って計算してみる  
+
+```{r}
+predict(model_1, type = "response",
+               newdata = data_frame(previous = 3, expm = 2:28))
+```
+- 選挙費用が増えるにつれて、予測当選確率が大きくなっていることがわかる  
+
+::: {.kakomi-box11}
+[ポイント]{.title-box11}
+・実際に何%ポイント予測当選確率が上昇するかを、具体的な予測当選確率を計算せずに係数の推定値である `log-odds` (`expm = 0.170`) から読み取るのは難しい\
+
+```{r, results = 'asis', echo = F}
+stargazer(model_1, type = "html")
+```
+
+・この推定値は「[オッズ]{style="color:red"}の[対数]{style="color:green"} 」= `log-odds` = `log(odds)` = `logit`    
+→ いくつか特定した `expm` の値で予測確率を計算し、その差を比較する作業が必要  
+:::  
+
+
+
+
+### 3.5.2 限界効果  
+#### `margins` を使った限界効果の計算
+- 上の例のように、予測当選確率を複数計算し、その差をとるという作業を繰り返すのは面倒\
+→ 特定の値における限界効果を直接計算するための
+`margins`パッケージを使うのが便利
+- `margins()`関数を使うと、特定の選挙費用額ごとの限界効果を求めることができる
+
+**選挙費用の限界効果 (previous = 3, expm = 400万円)**  
+
+- 例えば、当選回数が 3 回で選挙費用が 400 万円のとき、選挙費用 1 単位（=
+100 万円）の増加が当選確率に与える影響の大きさ（＝限界効果）は
+
+```{r, comment = "", warning = FALSE}
+margins(model_1, variables = "expm",
+        at = list(previous = 3, expm = 4))
+```　　
+
+- `exmp` の係数 (0.03424)  
+→「選挙費用を100万円増やしたときに、当選確率がどれだけ変わるか」 を、`expm = 4`, `previous = 3` の条件で評価したもの  
+- 単位は**[確率の変化量（ポイント差） ]{style="color:red"}**   
+- 選挙費用が当選確率に与える影響（限界効果）は **[0.03424 (= 3.4%ポイント)]{style="color:red"}**      
+→ 「選挙費用を100万円増やしたときに、当選確率が3.4%ポイント上昇」
+- これは平均限界効果 (AME: Average Marginal Effect) ではない  
+→　特定の条件での限界効果 (**[MEM]{style="color:red"}**: Marginal Effect at specified values)  
+- 選挙費用の水準が変われば p-value も変わるため、限界効果の大きさも変わる  
+→ 「どの費用水準で最も効果が大きいか」を調べることができる  
+
+**選挙費用の限界効果（previous = 3, expm: 0 〜 2,800万円)**  
+
+- どの値での限界効果を求めるかは、引数
+`at`に変数のリストを渡すことで指定する\
+- 複数の値、例えば、選挙費用が 0円 (expm = 0) から 2,800万円
+(expm = 28) までの限界効果を同時に表示してみる
+
+```{r, comment = ""}
+margins_1 <- margins(model_1, variables = "expm",
+at = list(previous = 3, expm = c(0:28))) #選挙費用を0円から2,800万円まで指定
+
+margins_1
+```
+
+- [**ロジスティック回帰分析の係数の限界効果は、説明変数の値によって変化する**]{style="color:blue"}\
+→ 各説明変数の係数を見ただけで結果を理解するのは困難\
+→ 説明変数が応答変数に影響を与える様子をいくつかの条件について図示する\
+→ **説明変数の値に応じた限界効果 (ME:Marginal Effects)**
+を図示する必要がある
+
+
+
+## [3.6 推定結果の意味を解釈する]{style="color:green"}  
+### 仮説 1 の結果の表示方法 (`Model_1`)  
+
+```{r, eval = FALSE}
+model_1 <- glm(wlsmd ~ previous + expm, 
+               data = hr21,
+               family = binomial(link = "logit"))
+```
+
+
+##### 「予測当選確率」と「限界効果」は異なる  
+- 「予測当選確率」は特定の選挙費用を使った候補者が当選する確率  
+- 「限界効果」は選挙費用が予測当選確率に与える影響（＝傾き）  
+- 予測当選確率と限界効果は ` margins::cplot() ` を利用して図示する\
+・Y軸に**予測当選確率**を表示したい時は `what = "prediction"`
+と指定  
+・Y軸に**限界効果**を表示したい時は `what = "effect"`
+と指定  
+- `previous` の値は自動的に `previous = 2.211`（平均値）に固定される    
+
+```{r}
+summary(hr21$previous)
+```
+
+#### 「選挙費用」と「予測当選確率」(`hr21_me`)
+
+```{r, echo=TRUE, results='hide', fig.show='hide'}
+hr21_pred <- cplot(model_1, 
+                  x = "expm", 
+                  what = "prediction") %>% # Y軸に予測当選確率を表示させる設定  
+  as_data_frame() %>%
+  ggplot(aes(x = xvals, 
+    y = yvals, 
+    ymin = lower, 
+    ymax = upper)) +
+  geom_ribbon(fill = "gray") +
+  geom_line() +
+labs(x = "選挙費用（単位：100万円）", 
+     y = "予測当選確率の予測値（確率: 0 〜 1）", 
+     title = "予測当選確率の予測値:2021総選挙")
+```
+
+#### 「選挙費用」と「選挙費用の限界効果」」(`hr21_pred`)
+
+```{r, echo=TRUE, results='hide', fig.show='hide'}
+hr21_me <- cplot(model_1,  
+                  x = "expm",    # x軸に据える変数
+                  dx = "expm",   # 説明変数
+                  what = "effect") %>%　# Y軸に限界効果を表示させる設定  
+  as_data_frame() %>%
+  ggplot(aes(x = xvals, 
+    y = yvals, 
+    ymin = lower, 
+    ymax = upper)) +
+  geom_ribbon(fill = "gray") +
+  geom_line() +
+  geom_abline(intercept = 0, slope = 0, linetype = "dashed", color = "red") + 
+  ylim(-0.0001, 0.06) +
+labs(x = "選挙費用（単位：100万円）", 
+     y = "選挙費用の限界効果（確率: 0 〜 1）", 
+     title = "選挙費用の限界効果:2021総選挙")
+```
+
+ [**仮説検証のまとめ（仮説 1）:**]{style="color:darkgreen"}
+
+```{r}
+hr21_pred + hr21_me
+```  
+
+::: {.kakomi-box11}
+[仮説検証の結論（仮説 1）:`当選回数が平均値 (2.211回)の候補者の場合`]{.title-box11} 
+
+##### 左側の図からわかること  
+・縦軸・・・確率（0 〜 1）  
+**・選挙費用が大きくなるにつれて、候補者の当選確率は大きくなる**  
+・選挙費用が小さいとき、予測当選確率は緩やかに上昇\
+・選挙費用が1000万円の候補者の予測当選確率は0.4933899（= 49%）   
+・選挙費用が2000万円の候補者の予測当選確率は0.8420812（= 84%）     
+・選挙費用が中程度になると曲線の傾きが少しずつ急になる\
+・選挙費用が大きくなると再び傾きが小さくなる\
+
+##### 右側の図からわかること  
+・縦軸・・・確率（0 〜 1）  
+・選挙費用の増加は当選確率に対して逓減的な効果をもつ  
+・0円〜1,100万円では限界効果が急上昇するが、1,100万円を超えると追加的効果は徐々に小さくなる  
+**・選挙費用の限界効果は、1,100万円の時が最大: 0.04250（4.25%ポイント）**  
+・選挙費用がそれより多くても少なくても効果が小さい\
+・全ての選挙費用の範囲で統計的に有意 
+:::  
+
+##### 選挙費用と当選確率  
+- 選挙費用を 100万円から2800万円まで100万円ずつ増やした時の、それぞれの時点における「当選確率」を R を使って計算してみる（`previous = 2.211`に固定）
+
+```{r}
+predict(model_1, type = "response",
+               newdata = data_frame(previous = 2.211, 
+                 expm = 2:28))
+```
+##### 選挙費用の限界効果  
+- 選挙費用が 0円 (expm = 0) から 2,800万円 (expm = 28) までの限界効果を表示してみる（`previous = 2.211`に固定）
+
+```{r}
+margins(model_1, variables = "expm",
+at = list(previous = 2.211, expm = c(0:28))) # 選挙費用を0円から2,800万円まで指定
+```
+
+
+
+
+## 3.7 当選回数ごとの予測当選確率  
+### 3.7.1 予測当選確率  
+- 選挙費用の額に関わりなく、選挙費用が予測当選確率に正の影響を与えていることはわかった  
+- それは、候補者の当選回数が異なってもいえるのか？  
+- 候補者の当選回数ごとに選挙費用が予測当選確率に与える影響をチェックする  
+- 候補者の当選回数 (`previous`) の記述統計を確認する   
+```{r}
+table(hr21$previous)
+```
+```{r}
+hist(hr21$previous)
+```  
+
+- 候補者の大多数の当選回数が 0 だとわかる  
+- 17回の当選回数を0から2回ずつ区切り、0, 2, 4, ..., 16まで分割する  
+→　`previous = seq(0, 16, by = 2)`  
+
+- 候補者の選挙費用 (`expm`) の記述統計を確認する   
+```{r}
+summary(hr21$expm)
+```
+```{r}
+hist(hr21$expm)
+```
+- 選挙費用は0円から2700万円強まで分布  
+→ 500万円ずつ分割する  →　`expm = seq(0, 20, by = 5))`  
+- 当選回数ごとの予測当選確率を可視化してみる  
+
+```{r}
+df_pre <- expand.grid(previous = seq(0, 17, by = 2), 
+  expm = seq(0, 20, by = 5)) %>% 
+  as_data_frame() 
+pred <- predict(model_1, 
+  type = "response", 
+  newdata = df_pre, 
+  se.fit = TRUE) 
+
+df_pre$fit <- pred$fit 
+df_pre$lower <- with(pred, fit - 2 * se.fit) 
+df_pre$upper <- with(pred, fit + 2 * se.fit) 
+df_pre <- df_pre %>%
+
+mutate(lower = ifelse(lower < 0, 0, lower), 
+  upper = ifelse(upper > 1, 1, upper)) 
+plt_prob <- ggplot(df_pre, aes(x = expm, y = fit)) +
+geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray") +
+geom_line() +
+
+facet_wrap(. ~ previous) + 
+  labs(x = "選挙費用（100万円）", y = "当選確率の予測値") 
+print(plt_prob)
+```  
+
+- 当選回数が少ない候補者は、選挙費用が当選確率の予測値に強い正の影響を与えている  
+- 当選回数が増えるにつれて、選挙費用が当選確率の予測値に与える影響が小さくなる  
+→　当選回数16回の候補者は、選挙費用を使わなくても使ってもほぼ当選している  
+
+### 3.7.2 限界効果  
+
+- 次に、当選回数が変わっても、選挙費用が当選確率に予測値に与える影響が統計的に有意なのかどうかをチェック  
+
+- **[`当選回数 (previous)` が増えるにつれて、`選挙費用 (expm)` の影響がどう変化するか]{style="color:red"}**を指定  
+→ `x = "previous", dx = "expm"`
+
+```{r, include = F}
+plt_previous <- cplot(model_1, 
+                  x = "previous", # x軸に据える変数
+                  dx = "expm", 　 # 説明変数
+                  what = "effect") %>%
+  as_data_frame() %>%
+  ggplot(aes(x = xvals, y = yvals, ymin = lower, ymax = upper)) +
+  geom_ribbon(fill = "gray") +
+  geom_line() +
+  geom_abline(intercept = 0, slope = 0, linetype = "dashed", color = "red") + 
+labs(x = "当選回数", 
+     y = "選挙費用の限界効果", 
+     title = "当選回数ごとの選挙費用の限界効果:2021総選挙")
+```
+
+```{r, eval = F}
+plt_previous <- cplot(model_1, 
+                  x = "previous", # x軸に据える変数
+                  dx = "expm", 　 # 説明変数
+                  what = "effect") %>%
+  as_data_frame() %>%
+  ggplot(aes(x = xvals, y = yvals, ymin = lower, ymax = upper)) +
+  geom_ribbon(fill = "gray") +
+  geom_line() +
+  geom_abline(intercept = 0, slope = 0, linetype = "dashed", color = "red") + 
+labs(x = "当選回数", 
+     y = "選挙費用の限界効果", 
+     title = "当選回数ごとの選挙費用の限界効果:2021総選挙")
+```
+```{r}
+print(plt_previous)
+```
+
+- `previous = 15`までは、95%信頼区間が y = 0 の赤い点線に触れていない  
+→ 当選回数が変わっても、`previous = 15` までは、選挙費用が当選確率に予測値に与える影響が統計的に有意
+
+::: {.kakomi-box11}
+[当選回数ごとの予測当選確率：まとめ]{.title-box11} 
+
+
+```{r}
+plt_prob + plt_previous
+```
+
+##### 左側の図からわかること  
+- 当選回数が少ない候補者は、選挙費用が当選確率の予測値に強い正の影響を与えている  
+- 当選回数が増えるにつれて、選挙費用が当選確率の予測値に与える影響が小さくなる  
+→　当選回数16回の候補者は、選挙費用を使わなくても使ってもほぼ当選している  
+
+##### 右側の図からわかること  
+
+- このことは当選回数0回から15回までの候補者に当てはまり、統計的に有意  
+- 選挙費用が当選確率の予測値に与える影響は当選回数が5回の候補者が最も大きい    
+:::
+
+::: {.kakomi-box11}
+[限界効果の統計的有意性]{.title-box11} 
+・限界効果は、説明変数 1 単位の増加が応答変数を何単位増加させるかを示す  
+・ここでの説明変数は「選挙費用」  
+
+##### 注意：「限界効果」と「予測当選確率」とは異なる  
+- 「限界効果」は選挙費用が予測当選確率に与える影響（＝傾き）  
+- 「予測当選確率」は特定の選挙費用を使った候補者が当選する確率  
+
+::: {style="text-align: center;"}
+![](graphs_tables/log_stat_sig.png){width="800"}
+:::
+
+→ 限界効果は説明変数の値によって変化する\
+→ 説明変数の値に応じた限界効果を示す必要がある\
+・図中の95% 信頼区間を見ると、有権者数によって信頼区間の幅が異なる\
+← 限界効果の標準誤差が、説明変数である選挙費用の値に応じて変わるため
+
+**- 主な説明変数が応答変数に与える影響が統計的に有意かどうかの判断**
+
+→
+説明変数の値によって標準誤差（信頼区間）が変化する様子も示す必要がある\
+[・上の事例では、観察された有権者数の範囲で**95%信頼区間全体が 0
+より大きい範囲**にある\
+→
+選挙費用が選挙の当落に与える影響は、選挙費用額にかかわらず統計的に有意]{style="color:red"}\
+[(観察された選挙費用の範囲で**95%信頼区間全体が 0
+より小さい範囲**にある時も統計的に有意)]{style="color:red"}
+
+・上図のように、主な説明変数が応答変数に与える影響（限界効果）の符号が、説明変数の値によって変わりうる\
+・説明費用の値が 1 より小さければ限界効果の値はマイナス、それより大きければ限界効果の値はプラス
+
+・上図に示されているように、ロジスティック回帰分析では、主な説明変数の効果が説明変数の値によって変わるだけでなく、[統計的に有意な範囲]{style="color:red"}と[有意でない範囲]{style="color:blue"}の両方をもつことがあり得る\
+・説明変数の値が 1 より小さい、もしくは 2  より大きければ統計的に有意\
+・説明変数の値が 1 と 2 の間では統計的に有意ではない\
+・説明変数がどの範囲の値をとると限界効果が統計的に有意になるかどうかを、回帰分析の係数の推定値を見ただけで判断することは非常に難しい\
+**→
+限界効果を図示してはじめて、限界効果がどの範囲でどのような符号をもつか、どの範囲で統計的に有意かが明らかになる**
+:::
+
+
+## [3.8 モデルの当てはまり具合を評価する ]{style="color:green"}  
+
+- ロジスティック回帰分析の当てはまり具合を評価する方法は次の 3 つ:　　
+
+**(1) 予測の的中率**  
+**(2) ROC 曲線と AUC**  
+**(3) 赤池情報量基準: AID**  
+
+- 予測の的中率
+
+- ここで説明しようとしているのは次のモデル\
+- 応答変数は二値変数で、各候補者が「当選」か「落選」か (wlsmd = 1 or 0)
+
+```{r, eval = FALSE}
+model_1 <- glm(wlsmd ~ previous + expm, 
+               data = hr21,
+               family = binomial(link = "logit"))
+```
+
+- 上で推定したロジスティック回帰式は、当落をどの程度正確に予測しているかを調べる\
+- 「予測値に基づく当落」と「実際の当落」をクロス集計表にする\
+- 当選確率が 0.5 以上という予測 = 「当選」と予測したと考える\
+- model_1 の予測値を `fitted()`関数を使って取り出し\
+　→「予測値に基づく当落」と「実際の当落」をクロス集計表にする
+
+```{r, comment = ""}
+Pred <- (fitted(model_1) >= 0.5) %>%
+  factor(levels = c(FALSE, TRUE),　
+         labels = c("落選予測", "当選予測"))
+
+table(Pred, hr21$wlsmd) %>% addmargins()
+```
+
+[【予想値に基づく当落】]{style="color:blue"}
+
+**・実際に落選した 546 人のうち、落選と予測されたのは 476 人**\
+・残りの 70 人については当選という誤った予測\
+**・実際に当選した 289 人のうち、169 人については当選という正しい予測**\
+・実際に当選した 298 人のうち 120 人については落選という誤った予測\
+**・全体としては、835 人中 645 人 (476 人 + 169 人)
+については正しい予測**\
+・残りの 190 人については誤った予測\
+**→　従って、このモデルの的中率は、645/835 (約77%)**
+
+- この「77%」という的中率をどう評価すべきか？\
+- ロジスティック回帰によって予測の的中率が 0 % から77%
+に上がったわけではない
+
+[【実際の当落 = 的中率】]{style="color:blue"}  
+
+**- ここでは 835 人の候補者中、実際には 289 人が当選**\
+→ 説明変数を何も加えず「全員当選」という予測をすれば\
+**→ 予測の精度は 289/835 (約34%)**
+
+<div class="kakomi-box11"><span class="title-box11">予測の的中率
+</span>
+model_1 は「的中率」を 34% から 77% へ 43 ポイント上げた  
+</div>  
+
+ロジスティック回帰の予測精度が高いといえるかどうかは、説明変数をいっさい使わなくても得られる「的中率」と比較して評価する
+
+- `ROC` 曲線と `AUC`  
+(1) 目視によるモデルの当てはまり具合の評価方法  
+**受信者操作特性（`receiver operating characteristic：ROC`）曲線**  
+
+**ROC 曲線の描き方**\
+ROC 線の横軸には、偽陽性率（[**false positive**]{style="color:red"}
+rate：FPR）と呼ばれるものを使う\
+- 偽陽性とは「本当は陰性なのに誤って陽性と判断されること」　　\
+- ここでは[**「本当は落選したのに当選と予測すること」=
+偽陽性**]{style="color:red"}\
+- 当落の境界線を当選確率 0.5 に設定すると、偽陽性率は 55/678
+（下図参照）
+
+```{r, comment = ""}
+Pred <- (fitted(model_1) >= 0.5) %>%
+  factor(levels = c(FALSE, TRUE),　labels = c("落選予測", "当選予測"))
+
+table(Pred, hr21$wlsmd) %>% addmargins()
+```
+
+- 偽陽性は誤った判断なので、偽陽性率は小さくなることが望ましい\
+- 縦軸には、真陽性率（[**true positive**]{style="color:blue"}
+rate：TPR）を使う\
+- 真陽性率は感度（sensitivity）とも呼ばれる\
+- 真陽性とは「本当は陽性のときに陽性であると正しく判断されること」\
+- ここでは[**「実際に当選した候補者を当選すると予測すること」=
+真陽性**]{style="color:blue"}　　\
+- 当落の境界線を当選確率 0.5 に設定した場合の感度は
+169/289（上の表を参照）\
+- 感度は正しい判断の確率を表すので、大きいほうが望ましい
+
+**- 当てはまりがよいモデルのROC 曲線:**\
+→ 点(0, 0) から点(0,1) の近くに進み、そこから点(1, 1)
+に向かって進む曲線\
+**- 当てはまりの悪いモデルのROC 曲線:**\
+→ ROC 曲線が 45 度線の近くを通過する　　
+
+- ここで推定している二つのモデルは次のとおり
+
+```{r}
+model_1 <- glm(wlsmd ~ expm, data = hr21,
+               family = binomial(link = "logit"))
+```
+
+```{r}
+model_2 <- glm(wlsmd ~ expm + previous, data = hr21,
+               family = binomial(link = "logit"))
+```
+
+- `model_1`と`model_2`のどちらの当てはまりがよいかを、`ROC曲線`を描いて考える\
+- `ROC曲線`を描くために **ROCR パッケージ**を使う\
+- `prediction()`
+という名前の関数は **ROCR** パッケージだけでなく **margins** パッケージにもある\
+→どちらの関数を使うか明記する　　
+
+```{r, fig.width = 5, fig.height = 5}
+pi1 <- predict(model_1, type = "response")
+pi2 <- predict(model_2, type = "response")
+pr1 <- ROCR::prediction(pi1, labels = hr21$wlsmd == "1")
+pr2 <- ROCR::prediction(pi2, labels = hr21$wlsmd == "1")
+roc1 <- performance(pr1, measure = "tpr", x.measure = "fpr")
+roc2 <- performance(pr2, measure = "tpr", x.measure = "fpr")
+df_roc <- data_frame(fpr = c(roc1@x.values[[1]], roc2@x.values[[1]]),
+                     tpr = c(roc1@y.values[[1]], roc2@y.values[[1]])) %>% 
+  mutate(model = rep(c("Model 1", "Model 2"), c(n()/2, n()/2)))
+roc <- ggplot(df_roc, aes(x = fpr, y = tpr,
+                          color = model, linetype = model)) + 
+  geom_line() +
+geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  scale_linetype_discrete(name = "") +
+  scale_color_discrete(name = "") +
+  coord_fixed() +
+  labs(x = "偽陽性率（1 - 特異度）", y = "真陽性率（感度）")
+print(roc)
+```
+
+<div class="kakomi-box11"><span class="title-box11">`ROC`曲線による当てはまり
+</span>
+青色 (model_2) の`ROC` 曲線は 45 度線（点線）から点(0, 1) のほうに離れており、モデルの当てはまりがいい  
+</div>  
+
+
+<div class="kakomi-box11"><span class="title-box11"> Model 2の`ROC`曲線だけを描きたい場合
+</span>
+
+```{r}
+# 予測値を計算
+pi2 <- predict(model_2, type = "response")
+
+# ROCR 用のオブジェクトを作成
+pr2 <- ROCR::prediction(pi2, labels = hr21$wlsmd == "1")
+roc2 <- performance(pr2, measure = "tpr", x.measure = "fpr")
+
+# データフレームに変換
+df_roc2 <- data.frame(
+  fpr = roc2@x.values[[1]],
+  tpr = roc2@y.values[[1]]
+)
+
+# ROC 曲線を ggplot で描画
+roc_plot2 <- ggplot(df_roc2, aes(x = fpr, y = tpr)) +
+  geom_line(color = "blue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  coord_fixed() +
+  labs(
+    x = "偽陽性率（1 - 特異度）",
+    y = "真陽性率（感度）",
+    title = "ROC曲線: Model 2"
+  )
+
+print(roc_plot2)
+```
+
+
+</div>  
+
+
+
+
+
+
+
+**(2) 数値指標によるモデルの当てはまり具合の評価方法**  
+
+#### AUC 
+
+- 目視だけで当てはまり具合の良し悪しを判断するのには限界がある\
+→ AUC（**area under the curve**：ROC 曲線の下側の面積）を使って評価する\
+- 上のROCを求めた図中の 0 ≤x ≤1、0 ≤y ≤1 の範囲で ROC
+曲線より下の面積を求める\
+- すべての ROC 曲線が2 点(0, 0) と(1, 1) を通り、当てはまりのよいモデル
+ほど(1, 1) の近くを通る\
+- ROC 曲線が 3 点(0, 0)、(0, 1)、(1, 1) を通るなら →曲線の下側の面積は
+1\
+- **当てはまりのよいモデルの AUC** → 1 に近くなる
+
+- **当てはまりの悪いモデルの AUC** → 0.5 に近くなる\
+　　（←ROC 曲線は 45 度線に近づくため）
+
+- ROC曲線で見る限り、二つのモデルの当てはまりのよさに大きな差はなさそう\
+- 念のため、`AUC`を計算する
+
+```{r,comment = ""}
+auc1 <- performance(pr1, measure = "auc")
+auc1@y.values[[1]]   # model_1 のAUC
+auc2 <- performance(pr2, measure = "auc")
+auc2@y.values[[1]]   # model_2 のAUC
+```
+
+<div class="kakomi-box11"><span class="title-box11">`AUC` による当てはまり
+</span>
+`AUC`を見る限り、`model_2` の当てはまりの方がよい  
+</div>  
+
+
+#### 赤池情報量基準 (`AID`)   
+
+- 赤池情報量基準 (`AID: Akaike information criterion`) を使う  
+- 多くの説明変数を使っても(= パラメータ数が増えても)、それに応じた分だけ尤度が増加しなければ、そのモデルは「良いモデル」とは言えない  
+- この基準で評価するのが `AID`    
+- `AIC` が最小のモデルが「最も良いモデル」とされる  
+
+```{r}
+AIC(model_1)
+AIC(model_2)
+```
+<div class="kakomi-box11"><span class="title-box11">`AID` による当てはまり
+</span>
+`model_2` の当てはまりの方がよい   
+</div>  
+
+
+
+
+
+# 4. ロジスティック回帰分析 (2)  
+
+### ｘがカテゴリカル変数の場合  
+
+- ロジスティック回帰分析の手順は次のとおりである
+
+1. 対立仮説と帰無仮説を設定する\
+2. 説明変数と応答変数の散布図を表示する\
+4. ロジスティック回帰式を求める\
+4. 回帰係数の有意性を検定する\
+5. 推定結果の意味を解釈する
+6. ロジスティック回帰モデルの当てはまり具合を評価する  
+
+## [4.1 対立仮説と帰無仮説を設定する]{style="color:green"}  
+
+- ここで[**検証したい仮説（＝対立仮説）**]{style="color:blue"}は次のとおり
+
+::: {.kakomi-box11}
+[仮説2]{.title-box11}・女性候補者の方が、小選挙区での当選確率は大きい
+:::
+
+- 従って、否定されるために設定する[**帰無仮説**]{style="color:red"}は次のようになる
+
+::: {.kakomi-box11}
+[帰無仮説]{.title-box11} ・候補者の性別は、小選挙区での当選確率とは関係がない\
+:::
+
+- ロジスティック回帰分析における検定では、重回帰分析における検定と同様、得られた
+`p 値`
+が有意水準よりも小さいときに帰無仮説を棄却し、対立仮説を受け容れる
+
+- 仮説2を検証するために次のモデルを考える
+
+#### Model 2   
+
+```{r, echo = FALSE, out.width="70%", out.height="70%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_f088.png")
+```
+
+- ダウンロードした
+2021年衆院選挙データを使い、候補者の小選挙区における当落
+(`wlsmd`) を縦軸に、選挙費用 (`expm`)
+を横軸にした散布図を表示する
+
+**データの準備 (`hr96-24.csv`)**  
+
+
+- ggplot2のテーマとフォントの設定を行う
+
+```{r}
+if (.Platform$OS.type == "windows") { 
+  if (require(fontregisterer)) {
+    my_font <- "Yu Gothic"
+  } else {
+    my_font <- "Japan1"
+  }
+} else if (capabilities("aqua")) {
+  my_font <- "HiraginoSans-W3"
+} else {
+  my_font <- "IPAexGothic"
+}
+
+theme_set(theme_gray(base_size = 9,
+                     base_family = my_font))
+```
+
+- 衆議院議員総選挙の得票データ[`hr96-24.csv`](https://asanoucla.github.io/hr96-24.csv) をダウンロード
+
+データのダウンロードが終わったら、データを読み込み `hr` と名前を付ける。
+
+```{r}
+hr <- read_csv("data/hr96-24.csv", na = ".")
+```
+
+データフレーム `hr` の中身を表示する
+
+```{r, comment = ""}
+names(hr)
+```
+
+- `select()` 関数を使って `year`, `wl`, `previous`, `gender` という 4
+つの変数だけを選ぶ\
+- `filter()` 関数を使って 2021年衆院選だけのデータを残す\
+- `wl` の中身を確認  
+
+```{r}
+unique(hr$wl)
+```
+- 0・・・小選挙区での落選  
+- 1・・・小選挙区での当選  
+- 2・・・復活当選  
+
+- `gender` の中身を確認  
+```{r}
+unique(hr$gender)
+```
+
+- `wl` を使って、選挙結果を示す変数 `wlsmd` （1 = 小選挙区当選、0 = その他）を作る     
+- `exp` を使って、選挙費用を示す変数 `expm`（単位は「百万円」）を作る
+
+```{r}
+hr21a <- hr %>%
+  select(year, wl, previous, gender) %>%
+  filter(year == 2021) %>% 
+  mutate(wlsmd = ifelse(wl == 1, 1, 0)) |> 
+  mutate(female = ifelse(gender == "female", 1, 0)) |> # 女性なら1、男性なら0
+  
+  select(year, wlsmd, female, previous) # 必要な変数だけを選択
+```
+
+データフレーム `hr21a` の中身を表示する
+
+```{r, comment = ""}
+hr21a
+```
+
+**データ**：\
+
+|変数名|詳細|
+|---|-----------------------|
+|`year`|衆院選が行われた年|
+|`wlsmd`|小選挙区での当落ダミー(当選 = 1, 落選 = 0)|
+|`female`|女性ダミー（女性なら1、男性なら0）「|
+|`previous`|当選回数|
+|||
+
+- データフレーム hr21 の記述統計を表示させる
+
+```{r, comment = ""}
+summary(hr21a)
+```
+
+
+- 欠損値がないことを確認できた  　　
+
+
+
+## [4.2 説明変数と応答変数の散布図を表示する]{style="color:green"}  
+- 分析で使うデータ (`hr21a`) の記述統計を表示  
+```{r, results = "asis"}
+stargazer::stargazer(as.data.frame(hr21a), 
+  type = "html")
+```
+
+- 当選回数と当落の散布図を描く. 
+- 2つの変数の関係を図示してみる  
+- 文字化けを避けるため、Macユーザは次の2行を実行する  
+```{r}
+theme_set(theme_gray(base_size = 10, 
+                     base_family = "HiraginoSans-W3"))
+```
+
+- `wlsmd` (0 or 1) も `female` (o or 1) も 2 値変数なので、`jitter()`関数を使ってデータを散らして表示させる  
+
+```{r}
+p1 <- ggplot(hr21a, aes(x = female, y = wlsmd)) + 
+  geom_jitter(size = 1,        # データを散らして表示させる指定
+              alpha = 1/3,
+              width = 0.05,
+              height = 0.05) +
+  labs(x = "候補者の性別",
+       y = "小選挙区での当落（0：落選、1：当選）")
+
+plot(p1)
+```
+
+- この図に**[通常の回帰直線を当てはめてみる]{style="color:blue"}**とこのようになる  
+
+```{r}
+p1 + geom_smooth(method = "lm", se = FALSE) +
+    annotate("label", 
+           label = "当落 (0 or 1) = a + bfemale", 
+           x = 0.5, y = 0.5,
+           size = 5, 
+           colour = "blue", 
+           family = "HiraginoSans-W3")
+```  
+
+
+#### オッズの対数をとった曲線  
+
+```{r}
+p4 <- ggplot(hr21a, aes(x = female, y = wlsmd)) + 
+  geom_jitter(size = 1,
+              alpha = 1/3,
+              width = 0.05,
+              height = 0.05) +
+  geom_smooth(method = "glm", 
+    color = "red",
+    method.args = list(family = binomial(link = "logit"))) +
+   labs(x = "候補者の性別",
+       y = "小選挙区での当落（0：落選、1：当選）")
+
+print(p4)
+```
+
+
+
+## [4.3 ロジスティック回帰式を求める]{style="color:green"}  
+
+#### [ロジスティック回帰式 (`Model 2`)]{style="color:green"}  
+
+- ここでは2021年の衆院選データを用い、候補者の性別で衆院選小選挙区での当落 (`wlsmd`) を説明するモデルを考える  
+
+**Model 2**  
+
+```{r, echo = FALSE, out.width="90%", out.height="90%",fig.cap="", fig.align='center'}
+knitr::include_graphics("graphs_tables/logit_f088.png")
+```
+
+- このモデルを式で表すとこのようになる  
+
+$$Pr(当選)=logit^{−1}(𝛼+\beta_1性別 + \beta_2当選回数)$$  
+
+
+- Rでロジスティック回帰分析を行うには、一般化線形モデル (Generalized Linear Models: GLM) を当てはめるための関数 `glm()` を使う  
+- `glm()`はロジスティック回帰以外でも頻繁に使う関数  
+- この関数をロジスティック回帰分析に使うには、引数 `family = binomial(link = "logit")` を指定  
+- `logit` とは「[オッズ]{style="color:red"}の[対数]{style="color:green"} 」= `log-odds` のこと  
+
+```{r}
+model_2 <- glm(wlsmd ~ female + previous, 
+            data = hr21a, 
+            family = binomial(link = "logit")) # 係数を「オッズの対数」に指定
+```
+
+- `tidy()` を使って、推定結果を確認する  
+```{r}
+tidy(model_2, conf.int = TRUE)
+```
+ →　表示される回帰式の係数 `estimate` は 「[オッズ]{style="color:red"}の[対数]{style="color:green"}」 = `log-odds`  
+ 
+ - `log-odds` は解釈しにくい  → 確率に変換する    
+ 
+- 当選確率を予測するためのロジスティック回帰式は次のとおり  
+
+$$Pr(当選) = logit^{-1}(\alpha + \beta_1性別 + \beta_2当選回数)$$
+
+$$= \frac{1}{1+exp(-[\alpha + \beta_1性別 + \beta_2当選回数])}$$
+$$= \frac{1}{1+exp(-[-1.6 - 0.6[female] + 0.43[previous]])}$$  
+
+
+
+
+## [4.4 回帰係数の解釈と有意性の検定]{style="color:green"}  
+#### 最もシンプルな結果の示し方: `Odd Ratios`  
+- `model_2` の結果をオッズ比で表示させてみる  
+
+```{r}
+tidy(model_2, 
+  conf.int = TRUE, 
+  exponentiate = TRUE)
+```
+
+### Forest Plot による Odds Ratio の表示
+
+```{r}
+# 結果を整形（オッズ比に変換）
+results <- tidy(model_2, 
+  conf.int = TRUE, 
+  exponentiate = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    term = recode(term,
+                  "female" = "性別（女性=1、男性=0）",
+                  "previous" = "当選回数"),
+    OR_label = sprintf("%.2f", estimate)   # ORを文字列化
+  )
+
+# forest plot + 数値ラベル
+ggplot(results, aes(x = estimate, y = term)) +
+  geom_point(size = 3, color = "blue") +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
+  geom_text(aes(label = OR_label), # ORを表示
+    hjust = 0.5, 
+    vjust = -2, 
+    size = 4) +  
+  labs(
+    title = "Odds Ratios from Logistic Regression",
+    x = "Odds Ratio (95% CI)",
+    y = ""
+  ) +
+  theme_minimal(base_size = 14) + # ラベルが切れないように余白
+  xlim(0, max(results$conf.high) * 1.2)   +
+   theme_bw(base_family = "HiraKakuProN-W3")
+```
+
+
+#### `性別` の係数：`0.551` （`p-value = 2.44e- 2`）  
+
+- 「候補者が女性の場合のオッズ」・・・$odds_{famele = 1}$　　
+- 「候補者が男性の場合ののオッズ」・・・$odds_{female = 0}$ 
+
+$$Odd Ratio = \frac{odds_{female=1}}{odds_{female=0}} = 0.551$$
+
+**→　$odds_{female=1}$ のオッズが $odds_{female=0}$ のオッズの0.551倍になる**  
+**[→　女性の方が当選しにくい]{style="color:red"}**  
+
+
+#### `当選回数` の係数：`1.53` （`p-value = 1.89e-34`）  
+
+- 「当選回数を1回増やした後のオッズ」・・・$odds_{previous + 1}$　　
+- 「当選回数を1回増やす前のオッズ」・・・$odds_{previous}$ 
+
+$$OddRatios = \frac{odds_{previous + 1}}{odds_{previous}} = 1.53$$
+
+**→　$odds_{previous + 1}$ のオッズが $odds_{previous}$ のオッズの 1.53倍になる**    
+**[→　当選回数が多い候補者ほど当選する]{style="color:red"}** 
+
+#### 統計的有意性  
+- `female` の `p.value` は `2.44e- 2`    
+- `previous` の `p.value` は `1.89e-34`  
+→　有意水準を 0.05 とすれば、いずれも変数も「影響がない」という帰無仮説を棄却できる  
+→ `female` も `previous` も当落に正の影響があり、その効果は統計的に有意と判断する
+
+
+## 4.5 望ましい結果の示し方  
+### 性別ごとの予想当選確率を計算する  
+#### 前職経験 (`previous`) を平均に固定    
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# 平均 previous を固定して、female を 0 / 1 に
+newdata <- data.frame(
+  female = c(0, 1),
+  previous = mean(hr21a$previous, na.rm = TRUE)
+)
+
+# 予測値と標準誤差
+pred <- predict(model_2, 
+  newdata = newdata, 
+  type = "response", 
+  se.fit = TRUE)
+
+# プロット用データ
+plot_df <- newdata %>%
+  mutate(
+    fit = pred$fit,
+    se = pred$se.fit,
+    lower = fit - 1.96 * se,
+    upper = fit + 1.96 * se,
+    sex = factor(female, labels = c("male", "female"))
+  )
+
+# グラフ描画：p値を図中にテキストとして追加
+plot_prediction <- ggplot(plot_df, aes(x = sex, y = fit)) +
+  geom_point(size = 5, color = "black") +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1) +
+  geom_text(aes(label = paste0(round(fit * 100, 1), "%")), 
+            hjust = -0.5, size = 5) +
+  geom_text(
+    data = data.frame(x = 1.5, y = max(plot_df$upper) + 0.05),
+    aes(x = x, y = y, label = "p = 0.024"),
+    inherit.aes = FALSE,
+    size = 5
+  ) +
+  labs(
+    title = "性別による予測当選確率",
+    x = "候補者の性別",
+    y = "予測当選確率"
+  ) +
+   theme_bw(base_family = "HiraKakuProN-W3")
+
+plot_prediction
+```
+
+::: {.kakomi-box11}
+[結果（予測当選確率の比較）]{.title-box11}  
+
+・図は、性別によって予測される当選確率の違いを示している  
+・前職経験 (previous) を平均 (2.162回) に固定している  
+
+・男性候補の当選確率は 33.8%  
+・女性候補の当選確率は 22%  
+・`p-value = 0.024` なので、5%有意水準で「女性候補は男性候補に比べて当選確率が低い」が有意  
+・予測当選確率の差は約 11.8 %ポイント: 33.8−22 = 11.8  
+・**[同じ過去当選回数（`previous = 平均値`）を持つ候補者を比べると、女性候補は男性候補に比べて小選挙区で当選する確率が有意に低い]{style="color:blue"}**  
+:::  
+
+- 独立変数がカテゴリカル変数の場合、**[分析の主要な関心が「性差が当選確率に与える効果」]{style="color:blue"}**であれば、結果の提示はこれで十分  
+- しかし**[「条件によって女性候補者の効果がどう変わるか」が主要関心であれば]{style="color:red"}**、female = 0 と female = 1 それぞれの条件付き限界効果を示す必要がある  
+
+
+## 4.6 さらに望ましい結果の示し方  
+#### Average Marginal Effect (AME) を計算して「性別の効果（差分）」を示す 
+
+- カテゴリ変数（female）では「男性 → 女性に変わったとき、当選確率がどれだけ変化するか」を各観測値で計算  
+→　その平均をとる →　これが平均限界効果 (**[AME]{style="color:red"}**: Average Marginal Effect)  
+→　「平均的に、女性は男性より当選確率が・・%ポイント高い（低い）」と示せる  
+→　係数の意味がさらに明快になる  
+
+
+```{r}
+# 必要パッケージ
+library(margins)
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r}
+# --- p値の整形関数 ---
+format_p <- function(x) {
+  ifelse(x < 0.001,
+         "p < 0.001",
+         formatC(x, format = "e", digits = 3))
+}
+# --- 限界効果の計算 ---
+mfx <- margins(model_2, variables = "female")
+```
+
+```{r}
+summary(mfx)
+```
+- この `AME (-0.0976)` が示すこと:  
+⇒ 「男性 → 女性に変わったとき、当選確率が平均的に `9.8%ポイント` (-0.0976) 低下する」
+- `p-value ≈ 0.024`　→　統計的に有意  
+
+::: {.kakomi-box11}
+[結果（限界効果の比較）]{.title-box11}  
+
+##### 「性別の効果（差分）」がわかる  
+=「性別が変わることで当選確率に与える平均的な影響」がわかる  
+**[・`AME = -0.098` → 女性だと平均的に当選確率が約 9.8 %ポイント下がる]{style="color:red"}**    
+・男女別に「その効果が統計的に有意」(`p-value = 0.0236`)  
+:::   
+
+
+# 5. ロジスティック回帰分析の実例  
+## 5.1 出場順番と優勝との関係（M1 決勝）  
+
+```{r, echo = FALSE, out.width="70%", out.height="70%",fig.cap="M1グランプリについての解説はこちらを参照：[M-1グランプリ2022](https://ja.wikipedia.org/wiki/M-1%E3%82%B0%E3%83%A9%E3%83%B3%E3%83%97%E3%83%AA2022)  ", fig.align='center'}
+knitr::include_graphics("graphs_tables/M1_2022.png")
+```  
+
+- この分析で使うデータ  
+
+|変数名|内容|備考|
+|------------------------|---------------|-------------------|
+|ID|||	
+|No|回||	
+|Year	|開催年||	
+|Rank	|最終順位||	
+|Name	|コンビ名	||
+|Company	|所属事務所名||	
+|Entry_No	|エントリー番号	||
+|Since	|コンビ結成年	||
+|No_Finals|これまでの決勝進出回数|当該年を除く|
+|Catchphrase|キャッチフレーズ	||
+|[**Final**]{style="color:red"}|[**最終決戦進出（0：進出せず、1:進出）**]{style="color:red"}|[**従属変数**]{style="color:red"}|	
+|[**Order10**]{style="color:blue"}|[**決勝における出場順番**]{style="color:blue"}|[**独立変数**]{style="color:blue"}|
+|Order3	|最終決戦における出場順番|最終決戦に進出しなかったコンビは欠損値|
+|Score10|	決勝における評価||
+|Score3	|最終決戦における評価|最終決戦に進出しなかったコンビは欠損値|
+|No_Reviewer	|審査委員数||
+||||
+
+・この分析で使うデータはここからダウンロード： [M1_Grand_Pix_2022.csv](https://asanoucla.github.io/M1_Grand_Pix_2022.csv)  
+・出典：[https://github.com/JaehyunSong/M-1_Grand_Pix](https://github.com/JaehyunSong/M-1_Grand_Pix)     
+
+### データの準備  
+- ファイル (`M1_Grand_Pix_2022.csv`) をダウンロードする 
+- Rプロジェクトフォルダ内に `data` という名称のフォルダを作成  
+- `data` フォルダ内に `M1_Grand_Pix_2022.csv`を置く  
+- ファイル (`M1_Grand_Pix_2022.csv`) を読み込み `df_m1` と名前を付ける
+```{r}
+df_m1 <- read_csv("data/M1_Grand_Pix_2022.csv")
+```
+
+- 分析しやすいように `Zombie` と `Winner` という二つの変数を作る   
+```{r}
+df_m1 <- df_m1 %>%
+  mutate(Zombie = if_else(Catchphrase == "（敗者復活）", 1, 0), # 敗者復活したかどうか（0:しない、1:した）　　
+         Winner = if_else(Rank == 1, 1, 0)) # 最終決戦で優勝したどうか（0: 2 位もしくは 3 位、1: 優勝）
+```  
+
+- `df_m1` の中身ははこんな感じ
+
+```{r}
+DT::datatable(df_m1)
+```
+
+- ロジステック回帰分析で使う変数一覧
+
+|変数名|内容|備考|
+|:------|:------------------------------|:-------------------|
+|[**Final**]{style="color:red"}|[**最終決戦でトップ 3 に残れたどうか（0: 残れず、1: 残れた）**]{style="color:red"}|[**従属変数**]{style="color:red"}|	
+|[**Order10**]{style="color:blue"}|[**決勝における出場順番 (1 〜 10）**]{style="color:blue"}|[**独立変数**]{style="color:blue"}|
+|Since	|コンビ結成年	||
+|No_Finals|これまでの決勝進出回数|当該年を除く|
+|Zombie|敗者復活したコンビなら 1、それ以外は 0||	
+||||
+
+
+- データの記述統計を表示  
+```{r, results = "asis"}
+stargazer(as.data.frame(df_m1),
+          type = "html")
+```
+
+### ロジステック回帰分析の実行  
+```{r}
+model_1 <- glm(Final ~ Order10 + Since + No_Finals + Zombie, 
+            data = df_m1, 
+            family = binomial("logit"))
+```
+- 分析結果を表示する　　
+```{r, results = "asis"}
+stargazer(model_1,
+          type = "html")
+```
+```{r}
+plot_summs(model_1)
+```
+
+
+### 最終決戦に選ばれる確率  
+- `Order10` の係数 `0.243` を見ると、「決勝における出場順番 (`Order10`)」と「最終決戦進出 (`Final`)」に正の関係があることがわかる  
+- しかし、この係数係数 `0.243` は `logit = Log Odds`  を表している  
+→ このままでは解釈が難しい  
+→ 出場順番が 1 から 10 まで変化する（= 出場が遅くなる）場合それぞれにおける[**最終決戦に選ばれる確率**]{style="color:red"}を計算してみる
+
+```{r}
+model_1 %>% 
+  prediction(at = list(Order10 = 1:10)) %>%
+  summary() %>%
+  rename("Order" = "at(Order10)") 
+```
+
+- この結果を可視化すると次のようになる  
+
+```{r}
+fig_1 <- cplot(model_1, 
+                  x = "Order10", 
+                  what = "prediction") %>%
+  as_data_frame() %>%
+  ggplot(aes(x = xvals, y = yvals, ymin = lower, ymax = upper)) +
+  geom_ribbon(fill = "gray") +
+  geom_line() +
+labs(x = "出場順番", 
+     y = "最終決戦に出場する確率の予測値", 
+     title = "Fig.1:出場順と最終決戦出場予測値") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  scale_x_continuous(breaks = seq(0, 10, by = 1),
+                     labels = seq(0, 10, by = 1))
+```  
+
+- 「出場順番」が変化するにつれて「出場順番」が「最終決戦に選ばれる確率」に与える影響力（＝傾き＝限界効果）は大きくなってる 
+- 出場順番が 1 から 10 まで変化するにつれて（= 出場が遅くなるほど）  
+→　[**最終決戦に選ばれる確率**]{style="color:red"}が大きくなっていることがわかる  
+- 出場順番が 1 番の場合　→　`Order` が 1 の `Prediction` の値は `0.1400`    
+→　最終決戦に選ばれる確率は約 `0.14 (= 14%)`  
+- 95% 信頼区間を見るとその確率のブレ幅は 5.5% から 22% の間  
+- 出場順番が 10 番の場合　→　`Order` が 10 の `Prediction` の値は `0.5618`  
+→　最終決戦に選ばれる確率は約 `56%`   
+- その確率のブレ幅は 40% から 72% の間  
+
+##### ロジステック回帰分析では、説明変数（この場合だと `Order10`）の値ごとに傾きが異なる  
+→　`Order10` の値ごとの傾き（＝限界効果）を調べる必要がある  
+
+### 限界効果  
+- 「出場順番」が「最終決戦に選ばれる確率」に与える影響力（＝傾き＝限界効果）は「出場順番」の値によって異なる  
+→　「出場順番」ごとの「限界効果」をチェック  
+- 横軸が「出場順番」(`Order10`)  
+- 縦軸が「限界効果」(`Marginal effect of Order10`)
+
+```{r}
+fig_2 <- cplot(model_1, 
+                  x = "Order10",   # x軸に据える変数
+                  dx = "Order10",  # 説明変数
+                  what = "effect") %>%
+  as_data_frame() %>%
+  ggplot(aes(x = xvals, y = yvals, ymin = lower, ymax = upper)) +
+  geom_ribbon(fill = "gray") +
+  geom_line() +
+  geom_abline(intercept = 0, slope = 0, linetype = "dashed", color = "red") + 
+  ylim(0, 0.1) +
+labs(x = "出場順番", 
+     y = "出場順番の平均限界効果", 
+     title = "Fig.2: 出場順番の平均限界効果") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  scale_x_continuous(breaks = seq(0, 10, by = 1),
+                     labels = seq(0, 10, by = 1))
+```  
+
+- 「最終決戦に選ばれる確率」と「限界効果」の結果を一つのグラフにまとめて表示する  
+```{r}
+fig_1 + fig_2
+```
+
+#### 左側の fig_1  
+- 出場順番が 1 から 10 まで変化するにつれて（= 出場が遅くなるほど）  
+→　[**最終決戦に選ばれる確率**]{style="color:red"}が大きくなっている  
+
+#### 右側の fig_2  
+- 95%信頼区間が縦軸 = 0 を交わっていない  
+→　「出場順番」(`Order10`)  が 1 から 10 のいずれにおいても、統計的に有意  
+
+
+
+### 棒グラフと線グラフで可視化  
+
+```{r}
+model_1 <- glm(Final ~ Order10 + Since + No_Finals + Zombie, 
+            data = df_m1, 
+            family = binomial("logit"))
+```
+
+- `df_m1` を使って、出場順番 (`Order10`) ごとに最終決戦進出に進出する確率を計算する  
+- 結果を `Mean_final` というデータフレームに格納する  
+
+```{r}
+bar_df_m1 <- df_m1 %>%
+  group_by(Order10) %>%
+  summarise(Mean_Final = mean(Final))
+bar_df_m1
+```
+
+- 出場順番 (`Order10`) ごとに最終決戦進出に進出する確率を棒グラフで可視化する 
+- `model_1` の推定結果を線グラフで可視化する  
+
+```{r}
+model_1 %>% 
+  prediction(at = list(Order10 = 1:10)) %>%
+  summary() %>%
+  rename("Order" = "at(Order10)") %>%
+  ggplot() +
+  geom_bar(data = bar_df_m1,
+           aes(x = Order10, 
+               y = Mean_Final), 
+           stat = "Identity", 
+           fill = "gray70") +
+  geom_pointrange(aes(x = Order, 
+                      y = Prediction, 
+                      ymin = lower,  # 進出確率の最小値
+                      ymax = upper), # 進出確率の最大値
+                  size = 1.2) +
+  geom_line(aes(x = Order, 
+                y = Prediction), 
+            size = 1.2) +
+  scale_x_continuous(breaks = 1:10, labels = 1:10) +
+  coord_cartesian(ylim = c(0, 0.75)) +
+  labs(x = "出場順番",
+       y = "最終決戦へ進出する確率",
+       title = "M-1グランプリ (2001-2022)") +
+  theme_minimal(base_family = "HiraKakuProN-W3") +
+  theme(panel.grid.minor = element_blank(),
+        text = element_text(size = 16)) 
+```  
+
+#### グラフの解釈：  
+- **棒グラフ**は単純にそれぞれの出場順番の出場者が最終決戦に出場した確率を表す 
+```{r}
+bar_df_m1 <- df_m1 %>%
+  group_by(Order10) %>%
+  summarise(Mean_Final = mean(Final))
+bar_df_m1
+```  
+
+- **線グラフ**はロジステック回帰分析 (`model_1`) による推定結果  
+
+```{r}
+model_1 %>% 
+  prediction(at = list(Order10 = 1:10)) %>%
+  summary() %>%
+  rename("Order" = "at(Order10)")
+```
+
+
+## 5.2 出場順番と優勝との関係（M1 最終決戦）  
+- 「決勝」において 10 組から 3 組だけが「最終決戦」に選ばれる  
+- ここでは「最終決戦」に選ばれた 3 組の中における出場順番と優勝との関係を分析する  
+
+
+- ロジステック回帰分析で使う変数一覧
+
+|変数名|内容|備考|
+|:------|:------------------------------|:-------------------|
+|[**Winner**]{style="color:red"}|[**最終決戦で優勝したかどうか（0：2 位もしくは  3 位、1 = 優勝）**]{style="color:red"}|[**従属変数**]{style="color:red"}|
+|[**Order3**]{style="color:blue"}|[**最終決戦における出場順番**]{style="color:blue"}|[**独立変数**]{style="color:blue"}|
+|Since	|コンビ結成年	||
+|No_Finals|これまでの決勝進出回数|当該年を除く|
+|Zombie|敗者復活したコンビなら 1、それ以外は 0||	
+||||
+
+### ロジステック回帰分析の実行  
+```{r}
+model_2 <- glm(Winner ~ Order3 + Since + No_Finals + Zombie, 
+            data = df_m1, 
+            family = binomial("logit"))
+```
+- 分析結果を表示する　　
+```{r, results = "asis"}
+stargazer(model_2,
+          type = "html")
+```
+```{r}
+plot_summs(model_2)
+```
+
+
+
+### 優勝する確率  
+- `Order3` の係数 `0.775` を見ると、「決勝における出場順番 (`Order3`)」と「最終決戦で優勝したかどうか (`Final`)」に正の関係があることがわかる  
+- しかし、この係数係数 `0.775` は `logit = Log Odds`  を表している  
+→ このままでは解釈が難しい  
+→ 出場順番が 1 から 3 まで変化する（= 出場が遅くなる）場合それぞれにおける[**優勝する確率**]{style="color:red"}を計算してみる
+
+```{r}
+model_2 %>% 
+  prediction(at = list(Order3 = 1:3)) %>%
+  summary() %>%
+  rename("Order" = "at(Order3)") 
+```
+
+- この結果を可視化すると次のようになる  
+
+```{r}
+fig_3 <- cplot(model_2, 
+                  x = "Order3", 
+                  what = "prediction") %>%
+  as_data_frame() %>%
+  ggplot(aes(x = xvals, y = yvals, ymin = lower, ymax = upper)) +
+  geom_ribbon(fill = "gray") +
+  geom_line() +
+labs(x = "出場順番", 
+     y = "優勝する確率の予測値", 
+     title = "Fig.3:出場順と優勝予測値") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  scale_x_continuous(breaks = seq(0, 3, by = 1),
+                     labels = seq(0, 3, by = 1))
+```  
+
+- 「出場順番」が変化するにつれて「出場順番」が「優勝する確率」に与える影響力（＝傾き＝限界効果）は大きくなってる 
+- 出場順番が 1 から 3 まで変化するにつれて（= 出場が遅くなるほど）  
+→　[**優勝する確率**]{style="color:red"}が大きくなっていることがわかる  
+- 出場順番が 1 番の場合　→　`Order` が 1 の `Prediction` の値は `0.2011`    
+→　最終決戦に選ばれる確率は約 `0.2011 (= 20%)`  
+- 95% 信頼区間を見るとその確率のブレ幅は 4.8% から 35% の間  
+- 出場順番が 3 番の場合　→　`Order` が 3 の `Prediction` の値は `0.5066`  
+→　最終決戦に選ばれる確率は約 `51%`   
+- その確率のブレ幅は 29% から 72% の間  
+
+##### ロジステック回帰分析では、説明変数（この場合だと `Order3`）の値ごとに傾きが異なる  
+→　`Order3` の値ごとの傾き（＝限界効果）を調べる必要がある  
+
+### 限界効果  
+- 「出場順番」が「最終決戦に選ばれる確率」に与える影響力（＝傾き＝限界効果）は「出場順番」の値によって異なる  
+→　「出場順番」ごとの「限界効果」をチェック  
+- 横軸が「出場順番」(`Order3`)  
+- 縦軸が「限界効果」(`Marginal effect of Order3`)
+
+```{r}
+fig_4 <- cplot(model_2, 
+                  x = "Order3",    # x軸に据える変数
+                  dx = "Order3",   # 説明変数
+                  what = "effect") %>%
+  as_data_frame() %>%
+  ggplot(aes(x = xvals, y = yvals, ymin = lower, ymax = upper)) +
+  geom_ribbon(fill = "gray") +
+  geom_line() +
+  geom_abline(intercept = 0, slope = 0, linetype = "dashed", color = "red") + 
+  ylim(-0.1, 0.36) +
+labs(x = "出場順番", 
+     y = "出場順番の平均限界効果", 
+     title = "Fig.4: 出場順番の平均限界効果") +
+  theme_bw(base_family = "HiraKakuProN-W3") +
+  scale_x_continuous(breaks = seq(0, 3, by = 1),
+                     labels = seq(0, 3, by = 1))
+```  
+
+- 「優勝する確率」と「限界効果」の結果を一つのグラフにまとめて表示する  
+```{r}
+fig_3 + fig_4
+```
+
+#### 左側の fig_3  
+- 出場順番が 1 から 3 まで変化するにつれて（= 出場が遅くなるほど）  
+→　[**優勝する確率**]{style="color:red"}が大きくなっている  
+
+#### 右側の fig_2  
+- 95%信頼区間が縦軸 = 0 と一部交わっている（出場順番が 2 と 3 の場合）  
+→　「出場順番」(`Order3`)  が 1 の場合のみ統計的に有意  
+
+
+
+### 棒グラフと線グラフで可視化  
+
+```{r}
+model_2 <- glm(Winner ~ Order3 + Since + No_Finals + Zombie, 
+            data = df_m1, 
+            family = binomial("logit"))
+```
+
+- `df_m1` を使って、出場順番 (`Order3`) ごとに最終決戦進出に進出する確率を計算する  
+- 結果を `Mean_final` というデータフレームに格納する  
+
+```{r}
+bar_df_m1_w <- df_m1 %>%
+  group_by(Order3) %>%
+  drop_na() |> 
+  summarise(Mean_Winner = mean(Winner))
+bar_df_m1_w
+```
+
+- 出場順番 (`Order3`) ごとに優勝する確率を棒グラフで可視化する 
+- `model_2` の推定結果を線グラフで可視化する  
+
+```{r}
+model_2 %>% 
+  prediction(at = list(Order3 = 1:3)) %>%
+  summary() %>%
+  rename("Order" = "at(Order3)") %>%
+  ggplot() +
+  geom_bar(data = bar_df_m1_w,
+           aes(x = Order3, 
+               y = Mean_Winner), 
+           stat = "Identity", 
+           fill = "gray70") +
+  geom_pointrange(aes(x = Order, 
+                      y = Prediction, 
+                      ymin = lower,  # 進出確率の最小値
+                      ymax = upper), # 進出確率の最大値
+                  size = 1.2) +
+  geom_line(aes(x = Order, 
+                y = Prediction), 
+            size = 1.2) +
+  scale_x_continuous(breaks = 1:3, labels = 1:3) +
+  coord_cartesian(ylim = c(0, 0.75)) +
+  labs(x = "出場順番",
+       y = "優勝する確率",
+       title = "M-1グランプリ (2001-2022)：最終決戦") +
+  theme_minimal(base_family = "HiraKakuProN-W3") +
+  theme(panel.grid.minor = element_blank(),
+        text = element_text(size = 16)) 
+```  
+
+#### グラフの解釈：  
+- **棒グラフ**は単純にそれぞれの出場順番の出場者が最終決戦に出場した確率を表す 
+```{r}
+bar_df_m1_w <- df_m1 %>%
+  group_by(Order3) %>%
+  drop_na() |> 
+  summarise(Mean_Winner = mean(Winner))
+bar_df_m1_w
+```  
+
+- **線グラフ**はロジステック回帰分析 (`model_2`) による推定結果  
+
+```{r}
+model_2 %>% 
+  prediction(at = list(Order3 = 1:3)) %>%
+  summary() %>%
+  rename("Order" = "at(Order3)")
+```
+
+### 結論
+・2001年から2022年までのM1グランプリにおける「出場順番」と「優勝」の関係は次の世にまとめることができる 
+
+::: {.kakomi-box11}
+[結論]{.title-box11}・**M1決勝**では「出場順番」が遅くなるにつれて最終決戦に選ばれる確率大きくなる  
+・1 番目に出場する場合、約14%（統計的に有意）  
+・5 番目に出場する場合、約29%（統計的に有意）  
+・・・  
+・10 番目に出場する場合、約56%（統計的に有意） 
+
+・**M1最終決戦**では「出場順番」が遅くなるにつれて優勝する確率大きくなる「傾向にある」  
+・1 番目に出場する場合、約20%（統計的に有意）   
+・2 番目に出場する場合、約34%    
+・3 番目に出場する場合、約51%    
+:::
+
+
+
+# 6. Excercise  
+
+- 民主党が政権交代を果たした**2009年総選挙データ**を使って、立候補者が小選挙区で当選したか否か（`wlsmd`）を応答変数、過去の当選回数（`previous`）と選挙費用（`expm`）を説明変数としたロジスティック回帰分析を実行し、以下の各問に答えなさい。  
+- 分析で使うデータは衆院選選挙データは [hr96-24.csv](https://asanoucla.github.io/hr96-24.csv) からダウンロード。 
+
+`Q1.`当落（`wlsmd`）を縦軸に、選挙費用（`expm`）を横軸にとった散布図（むりやり通常の回帰直線を当てはめた直線）を描きなさい。
+
+`Q2.`当選予測確率を縦軸に、選挙費用（`expm`）を横軸にとった散布図（`wlsmd`のオッズをとった曲線）を描きなさい。
+
+`Q3.`立候補者が小選挙区で当選したか否か（`wlsmd`）を応答変数、選挙費用（`expm`）を説明変数としたモデルに `model_1` という名前を付けてロジスティック回帰分析し、`tidy()`関数を使ってその結果を表示しなさい。  
+
+`Q4.`立候補者が小選挙区で当選したか否か（`wlsmd`）を応答変数、過去の当選回数（`previous`）と選挙費用（`expm`）を説明変数としたモデルに `model_2` という名前を付けてロジスティック回帰分析し、`tidy()`関数を使ってその結果を表示しなさい。  
+
+`Q5.` `model_1` と `model_2` の分析結果を `stargazer()`関数を使って同一の表に示しなさい。  
+
+`Q6.` `model_2` の分析結果の `expm` と `previous` の係数が何を意味しているのかを説明し、この結果からわかることを述べなさい。  
+
+`Q7.` `margins::cplot()`関数を使って `model_2` の推定結果を表示し結論を述べなさい。分析結果は `patchwork`パッケージを使って表示させること。
+
+`Q8.` `model_2` の予測の的中率を上げるのか下げるのか、解説しなさい。  
+
+`Q9.` `model_1` と `model_2` それぞれの ROC 曲線を比較して示し、どちらがよりよいモデルかこたえなさい。  
+
+`Q10.` `model_2` において、当選回数ごとの予測当選確率とその統計的有意性を `margins::cplot()` 関数を使って推定しなさい。  
+
+
+**参考文献**    
+  <ul>
+  <li>Kieran Healy, DATA VISUALIZATION, Princeton, 2019</li>
+   <li>[宋財泫 (Jaehyun Song)・矢内勇生 (Yuki Yanai)「私たちのR: ベストプラクティスの探究」](https://www.jaysong.net/RBook/)</li>  
+  <li>浅野正彦, 矢内勇生.『Rによる計量政治学』オーム社、2018年</li>
+  <li>浅野正彦, 中村公亮.『初めてのRStudio』オーム社、2018年</li>
+  <li>Winston Chang, R Graphics Cookbook, O'Reilly Media, 2012.</li>
+<li>Kosuke Imai, Quantitative Social Science: An Introduction, Princeton University Press, 2017</li>
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
