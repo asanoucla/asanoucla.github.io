@@ -1,0 +1,93 @@
+---
+title: "Week 4: Quiz"
+author: "Your name"
+date:  "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    self_contained: true
+---
+<style>
+ 
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+</style>
+
+```{css, echo=F}
+.kakomi-box11 {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ color: #555555; /* 文章色 */
+ background-color: #fff; /* 背景色 */
+ border: 1px solid #555555; /* 枠線の太さ - 色 */
+ width: 90%;
+}
+.title-box11 {
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top: -15px;
+ font-weight: bold;
+ background-color: #fff; /* タイトル背景色 */
+ color: #555555; /* タイトル文字色 */
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,       
+  message = FALSE,      
+  comment = "",
+  fig.align = "center"  
+  )
+```
+
+- ここで必要な R パッケージ  
+
+```{r}
+library(tidyverse)
+library(stargazer)
+```  
+
+# 8. Exercise  
+## Q8.1:  
+
+- Refer to `1. Sorting Rows: arrange()` and answer the following questions:  
+- Use the House of Representatives election dataset [(hr96-21.csv)](https://asanoucla.github.io/hr96-21.csv) for the analysis.  
+- Limit the displayed variables to the following six:
+
+(1) year  
+(2) ku 
+(3) kun  
+(4) seito  
+(5) name  
+(6) vote  
+(7) voteshare   
+
+
+- Q1: Among the candidates of the 2021 general election, list the top 10 candidates in descending order of the number of votes (`vote`) obtained.  
+
+- Q2: Among the candidates of the 2021 general election, list the top 10 candidates in descending order of vote share (`voteshare`).  
+
+
+## Q8.2:  
+
+- Refer to `7.3 separate()` and answer the following questions:  
+- Use [COVID19_Worldwide.csv](https://www.jaysong.net/RBook/Data/COVID19_Worldwide.csv) data in the analysis.  
+
+- Q1: Draw a scatter plot for the year 2020 (January 22nd to July 10th) with `Test_Total` on the x-axis and `Confirmed_Total` on the y-axis.  
+- Q2: Draw a scatter plot for the year 2020 (January 22nd to July 10th) with `Test_Total` on the x-axis and `Confirmed_Total` on the y-axis.  If there are outliers, show a scatter plot excluding them.  
